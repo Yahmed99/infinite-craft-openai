@@ -23,7 +23,7 @@ const port = Number(process.env.PORT ?? 8787);
 app.use(cors({
   origin: [
     "http://localhost:5173",
-    "https://infinite-craft-openai.vercel.app/"
+    "https://infinite-craft-openai.vercel.app"
   ]
 }));app.use(express.json({ limit: "1mb" }));
 
