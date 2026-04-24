@@ -20,9 +20,12 @@ import { normalizeElementName, pairKey } from "./utils.js";
 
 const app = express();
 const port = Number(process.env.PORT ?? 8787);
-
-app.use(cors({ origin: "http://localhost:5173" }));
-app.use(express.json({ limit: "1mb" }));
+app.use(cors({
+  origin: [
+    "http://localhost:5173",
+    "https://infinite-craft-openai.vercel.app/"
+  ]
+}));app.use(express.json({ limit: "1mb" }));
 
 function getDeviceId(req) {
   const id = req.header("X-Device-Id");
