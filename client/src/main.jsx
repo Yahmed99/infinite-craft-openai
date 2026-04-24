@@ -6,8 +6,9 @@ const API_BASE = import.meta.env.VITE_API_BASE;
 
 const STARTERS = [
   { name: "Water", emoji: "💧" },
-  { name: "Wave", emoji: "🌊" },
-  { name: "Beach", emoji: "🏖️" },
+  { name: "Fire", emoji: "🔥" },
+  { name: "Earth", emoji: "🌍" },
+  { name: "Wind", emoji: "🌬️" },
   { name: "Surfboard", emoji: "🏄" },
 ];
 
