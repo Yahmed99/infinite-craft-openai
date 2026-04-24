@@ -1,0 +1,19 @@
+{
+  "name": "infinite-craft-openai-server",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "dev": "node --watch src/index.js",
+    "start": "node src/index.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.8.1",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.7",
+    "express": "^4.21.2",
+    "infinite-craft-openai": "file:..",
+    "openai": "^4.87.3",
+    "zod": "^3.24.2"
+  }
+}
