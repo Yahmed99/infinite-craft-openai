@@ -12,7 +12,8 @@ import {
   insertDeviceRecipe,
   insertDeviceElement,
   resetDeviceData,
-  getElementByName
+  getElementByName,
+  getGlobalGraphRows
 } from "./db.js";
 
 import { createEmbedding, generateCombination } from "./openai.js";
@@ -57,6 +58,64 @@ app.get("/api/elements", (req, res) => {
   res.json({
     elements: allDeviceElements(deviceId)
   });
+});
+
+app.get("/api/graph/global", (req, res) => {
+  try {
+    const rows = getGlobalGraphRows();
+
+    const nodeMap = new Map();
+    const edges = [];
+
+    function normalizeId(name) {
+      return String(name).trim().toLowerCase();
+    }
+
+    function addNode(name, emoji = "✨") {
+      const id = normalizeId(name);
+
+      if (!nodeMap.has(id)) {
+        nodeMap.set(id, {
+          id,
+          label: name,
+          emoji
+        });
+      }
+    }
+
+    for (const row of rows) {
+      const inputA = normalizeId(row.input_a_name);
+      const inputB = normalizeId(row.input_b_name);
+      const result = normalizeId(row.result_name);
+      const recipeId = String(row.recipe_id);
+
+      addNode(row.input_a_name, row.input_a_emoji || "✨");
+      addNode(row.input_b_name, row.input_b_emoji || "✨");
+      addNode(row.result_name, row.result_emoji || "✨");
+
+      edges.push({
+        id: `${recipeId}:a`,
+        source: inputA,
+        target: result,
+        recipeId
+      });
+
+      edges.push({
+        id: `${recipeId}:b`,
+        source: inputB,
+        target: result,
+        recipeId
+      });
+    }
+
+    res.json({
+      nodes: Array.from(nodeMap.values()),
+      edges
+    });
+  } catch (err) {
+    console.error("Graph endpoint error:", err);
+    res.status(500).json({ error: "Failed to load global graph" });
+  }
 });
 
 app.post("/api/combine", async (req, res) => {

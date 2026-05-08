@@ -68,123 +68,6 @@ const seedElements = [
 ];
 
 const starterRecipes = [
-  // --- CORE ELEMENT INTERACTIONS ---
-  ["earth+water","Earth","Water","Mud","🟫"],
-  ["fire+water","Fire","Water","Steam","💨"],
-  ["earth+fire","Earth","Fire","Lava","🌋"],
-  ["air+water","Wind","Water","Wave","🌊"],
-  ["air+earth","Wind","Earth","Dust","🌪️"],
-  ["air+fire","Wind","Fire","Smoke","💨"],
-
-  // --- BASIC MATERIALS ---
-  ["earth+earth","Earth","Earth","Mountain","⛰️"],
-  ["water+water","Water","Water","Lake","🏞️"],
-  ["fire+fire","Fire","Fire","Inferno","🔥"],
-  ["air+air","Wind","Wind","Storm","🌩️"],
-
-  // --- NATURE ---
-  ["earth+rain","Earth","Rain","Plant","🌱"],
-  ["water+earth","Water","Earth","Clay","🧱"],
-  ["plant+water","Plant","Water","Tree","🌳"],
-  ["tree+fire","Tree","Fire","Ash","⚫"],
-  ["ash+water","Ash","Water","Soil","🪨"],
-  ["soil+plant","Soil","Plant","Forest","🌲"],
-
-  // --- WEATHER ---
-  ["water+air","Water","Wind","Cloud","☁️"],
-  ["cloud+water","Cloud","Water","Rain","🌧️"],
-  ["cloud+fire","Cloud","Fire","Lightning","⚡"],
-  ["storm+water","Storm","Water","Hurricane","🌀"],
-  ["storm+earth","Storm","Earth","Tornado","🌪️"],
-
-  // --- HEAT / ROCK ---
-  ["lava+water","Lava","Water","Stone","🪨"],
-  ["stone+fire","Stone","Fire","Metal","⚙️"],
-  ["metal+fire","Metal","Fire","Molten Metal","🔥"],
-  ["metal+earth","Metal","Earth","Ore","⛏️"],
-
-  // --- LIFE ---
-  ["water+life","Water","Life","Fish","🐟"],
-  ["earth+life","Earth","Life","Animal","🐾"],
-  ["animal+water","Animal","Water","Amphibian","🐸"],
-  ["animal+air","Animal","Wind","Bird","🐦"],
-  ["animal+fire","Animal","Fire","Dragon","🐉"],
-
-  // --- HUMANS ---
-  ["animal+tool","Animal","Tool","Human","🧍"],
-  ["human+fire","Human","Fire","Cook","👨‍🍳"],
-  ["human+earth","Human","Earth","Farmer","👨‍🌾"],
-  ["human+water","Human","Water","Sailor","⛵"],
-  ["human+air","Human","Wind","Pilot","✈️"],
-
-  // --- TECHNOLOGY ---
-  ["metal+tool","Metal","Tool","Machine","⚙️"],
-  ["machine+energy","Machine","Energy","Engine","🚂"],
-  ["engine+metal","Engine","Metal","Car","🚗"],
-  ["engine+air","Engine","Wind","Plane","✈️"],
-  ["engine+water","Engine","Water","Boat","🚤"],
-
-  // --- ENERGY ---
-  ["fire+energy","Fire","Energy","Heat","🔥"],
-  ["water+energy","Water","Energy","Hydropower","⚡"],
-  ["wind+energy","Wind","Energy","Windmill","🌬️"],
-  ["earth+energy","Earth","Energy","Geothermal","🌋"],
-
-  // --- OCEAN ---
-  ["water+earth","Water","Earth","Beach","🏖️"],
-  ["beach+water","Beach","Water","Ocean","🌊"],
-  ["ocean+life","Ocean","Life","Coral","🪸"],
-  ["ocean+animal","Ocean","Animal","Shark","🦈"],
-  ["ocean+plant","Ocean","Plant","Seaweed","🌿"],
-
-  // --- FIRE EVOLUTION ---
-  ["fire+forest","Fire","Forest","Wildfire","🔥"],
-  ["wildfire+earth","Wildfire","Earth","Charcoal","⚫"],
-  ["charcoal+metal","Charcoal","Metal","Steel","🔩"],
-
-  // --- BUILDING ---
-  ["stone+tool","Stone","Tool","House","🏠"],
-  ["house+human","House","Human","Family","👨‍👩‍👧"],
-  ["house+city","House","City","Neighborhood","🏘️"],
-  ["metal+house","Metal","House","Skyscraper","🏙️"],
-
-  // --- CITY ---
-  ["human+human","Human","Human","Society","🏙️"],
-  ["society+metal","Society","Metal","City","🏙️"],
-  ["city+car","City","Car","Traffic","🚗"],
-  ["city+plane","City","Plane","Airport","✈️"],
-
-  // --- FUN / ABSTRACT ---
-  ["fire+water","Fire","Water","Conflict","⚔️"],
-  ["earth+air","Earth","Wind","Erosion","🌪️"],
-  ["water+time","Water","Time","River","🏞️"],
-  ["river+earth","River","Earth","Canyon","🏜️"],
-  ["river+city","River","City","Bridge","🌉"],
-
-  // --- EXTRA CHAINS ---
-  ["mountain+snow","Mountain","Snow","Glacier","🧊"],
-  ["glacier+water","Glacier","Water","Iceberg","🧊"],
-  ["iceberg+ocean","Iceberg","Ocean","Titanic","🚢"],
-
-  ["cloud+city","Cloud","City","Smog","🌫️"],
-  ["smog+human","Smog","Human","Pollution","🏭"],
-
-  ["tree+tool","Tree","Tool","Wood","🪵"],
-  ["wood+fire","Wood","Fire","Campfire","🔥"],
-  ["campfire+human","Campfire","Human","Story","📖"],
-
-  ["metal+energy","Metal","Energy","Electricity","⚡"],
-  ["electricity+human","Electricity","Human","Technology","💻"],
-  ["technology+human","Technology","Human","AI","🤖"],
-
-  ["ai+human","AI","Human","Cyborg","🤖"],
-  ["ai+city","AI","City","Smart City","🏙️"],
-
-  ["ocean+wind","Ocean","Wind","Wave Rider","🏄‍♂️"],
-  ["wave rider+beach","Wave Rider","Beach","Surfing","🏄"],
-
-  ["storm+ocean","Storm","Ocean","Tsunami","🌊"],
-  ["tsunami+city","Tsunami","City","Disaster","🌪️"],
 
     // --- NYC / CULTURE STARTER RECIPES ---
   ["food+place", "Food", "Place", "Bodega", "🏪"],
@@ -478,4 +361,28 @@ export function getElementByName(name) {
     FROM elements
     WHERE LOWER(name) = LOWER(?)
   `).get(name);
+}
+export function getGlobalGraphRows() {
+  return db.prepare(`
+    SELECT
+      r.id AS recipe_id,
+
+      r.a AS input_a_name,
+      input_a.emoji AS input_a_emoji,
+
+      r.b AS input_b_name,
+      input_b.emoji AS input_b_emoji,
+
+      r.result_name AS result_name,
+      r.result_emoji AS result_emoji
+
+    FROM recipes r
+    LEFT JOIN elements input_a
+      ON LOWER(input_a.name) = LOWER(r.a)
+
+    LEFT JOIN elements input_b
+      ON LOWER(input_b.name) = LOWER(r.b)
+
+    ORDER BY r.id ASC
+  `).all();
 }
