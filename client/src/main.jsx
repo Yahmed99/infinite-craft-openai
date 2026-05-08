@@ -5,11 +5,38 @@ import "./styles.css";
 const API_BASE = import.meta.env.VITE_API_BASE;
 
 const STARTERS = [
-  { name: "Water", emoji: "💧" },
-  { name: "Fire", emoji: "🔥" },
-  { name: "Earth", emoji: "🌍" },
-  { name: "Wind", emoji: "🌬️" },
-  { name: "Surfboard", emoji: "🏄" },
+  {
+    name: "Person",
+    emoji: "🧍"
+  },
+  {
+    name: "Place",
+    emoji: "📍"
+  },
+  {
+    name: "Food",
+    emoji: "🍕"
+  },
+  {
+    name: "Transit",
+    emoji: "🚇"
+  },
+  {
+    name: "Money",
+    emoji: "💸"
+  },
+  {
+    name: "Time",
+    emoji: "⏰"
+  },
+  {
+    name: "Weather",
+    emoji: "🌧️"
+  },
+  {
+    name: "Culture",
+    emoji: "🎭"
+  }
 ];
 
 function getDeviceId() {
@@ -145,9 +172,11 @@ async function resetLocal() {
       <section className="hero">
         <div>
           <p className="eyebrow">OpenAI + embeddings</p>
-          <h1>Infinite Craft CTP</h1>
+          <h1>NYCrafts CTP</h1>
           <p className="subtitle">
-            Click two elements to combine them. New recipes are generated once,
+            Combine NYC food, transit chaos, boroughs, slang, famous figures, nightlife,
+            landmarks, and everyday city moments into funny local discoveries.
+            Click any two elements to combine them. New recipes are generated once,
             cached, and remembered.
           </p>
         </div>

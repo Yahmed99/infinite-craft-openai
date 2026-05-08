@@ -49,20 +49,23 @@ CREATE TABLE IF NOT EXISTS device_recipes (
 );
 `);
 
-const seedElements = [
-  ["Water", "💧"],
-  ["Fire", "🔥"],
-  ["Earth", "🌍"],
-  ["Wind", "🌬️"],
-  ["Surfboard", "🏄"]
-];
-
 // const seedElements = [
 //   ["Water", "💧"],
-//   ["Wave", "🌊"],
-//   ["Beach", "🏖️"],
+//   ["Fire", "🔥"],
+//   ["Earth", "🌍"],
+//   ["Wind", "🌬️"],
 //   ["Surfboard", "🏄"]
 // ];
+const seedElements = [
+  ["Person", "🧍"],
+  ["Place", "📍"],
+  ["Food", "🍕"],
+  ["Transit", "🚇"],
+  ["Money", "💸"],
+  ["Time", "⏰"],
+  ["Weather", "🌧️"],
+  ["Culture", "🎭"]
+];
 
 const starterRecipes = [
   // --- CORE ELEMENT INTERACTIONS ---
@@ -181,7 +184,119 @@ const starterRecipes = [
   ["wave rider+beach","Wave Rider","Beach","Surfing","🏄"],
 
   ["storm+ocean","Storm","Ocean","Tsunami","🌊"],
-  ["tsunami+city","Tsunami","City","Disaster","🌪️"]
+  ["tsunami+city","Tsunami","City","Disaster","🌪️"],
+
+    // --- NYC / CULTURE STARTER RECIPES ---
+  ["food+place", "Food", "Place", "Bodega", "🏪"],
+  ["food+money", "Food", "Money", "Dollar Slice", "🍕"],
+  ["food+person", "Food", "Person", "New Yorker", "🗽"],
+  ["food+time", "Food", "Time", "Late Night Snack", "🌙"],
+  ["culture+food", "Culture", "Food", "Street Food", "🥙"],
+  ["food+weather", "Food", "Weather", "Soup Weather", "🍜"],
+  ["place+transit", "Place", "Transit", "Subway Station", "🚉"],
+  ["money+transit", "Money", "Transit", "MetroCard", "💳"],
+  ["person+transit", "Person", "Transit", "Commuter", "🧑‍💼"],
+  ["time+transit", "Time", "Transit", "Rush Hour", "😵‍💫"],
+  ["transit+weather", "Transit", "Weather", "Subway Flooding", "🌊"],
+  ["culture+transit", "Culture", "Transit", "Subway Performer", "🎷"],
+  ["person+place", "Person", "Place", "Neighborhood", "🏘️"],
+  ["money+place", "Money", "Place", "Rent", "🏠"],
+  ["place+time", "Place", "Time", "Meetup Spot", "📍"],
+  ["place+weather", "Place", "Weather", "Central Park", "🌳"],
+  ["culture+place", "Culture", "Place", "Times Square", "🌆"],
+  ["money+person", "Money", "Person", "Side Hustle", "💼"],
+  ["person+time", "Person", "Time", "Busy New Yorker", "🏃"],
+  ["person+weather", "Person", "Weather", "Forgot Umbrella", "🌧️"],
+  ["culture+person", "Culture", "Person", "Street Artist", "🎨"],
+  ["money+time", "Money", "Time", "Payday", "🤑"],
+  ["money+weather", "Money", "Weather", "Umbrella Vendor", "☂️"],
+  ["time+weather", "Time", "Weather", "Snow Day", "❄️"],
+
+  ["bodega+food", "Bodega", "Food", "Chopped Cheese", "🥪"],
+  ["bodega+money", "Bodega", "Money", "Bodega Cat", "🐈"],
+  ["bodega+person", "Bodega", "Person", "Regular Customer", "🙂"],
+  ["bodega+time", "Bodega", "Time", "Midnight Bodega Run", "🏃"],
+  ["bodega+culture", "Bodega", "Culture", "Neighborhood Legend", "🏆"],
+  ["bodega+weather", "Bodega", "Weather", "Steamy Deli Counter", "♨️"],
+
+  ["dollar slice+new yorker", "Dollar Slice", "New Yorker", "Pizza Rat", "🐀"],
+  ["dollar slice+time", "Dollar Slice", "Time", "2 AM Slice", "🌙"],
+  ["dollar slice+money", "Dollar Slice", "Money", "Inflation Slice", "😳"],
+  ["money+street food", "Money", "Street Food", "Halal Cart", "🥙"],
+  ["halal cart+time", "Halal Cart", "Time", "Lunch Rush", "🥙"],
+  ["halal cart+weather", "Halal Cart", "Weather", "Steam Cloud", "💨"],
+  ["halal cart+new yorker", "Halal Cart", "New Yorker", "White Sauce Debate", "🥫"],
+  ["new yorker+soup weather", "New Yorker", "Soup Weather", "Matzo Ball Soup", "🍲"],
+  ["late night snack+money", "Late Night Snack", "Money", "Coffee", "☕"],
+  ["chopped cheese+new yorker", "Chopped Cheese", "New Yorker", "Bodega Loyalty", "❤️"],
+
+  ["metrocard+subway station", "MetroCard", "Subway Station", "MTA", "🚇"],
+  ["mta+time", "MTA", "Time", "Train Delay", "⏳"],
+  ["money+mta", "Money", "MTA", "Fare Hike", "📈"],
+  ["mta+weather", "MTA", "Weather", "Service Alert", "⚠️"],
+  ["culture+mta", "Culture", "MTA", "Subway Showtime", "🎤"],
+  ["rush hour+subway station", "Rush Hour", "Subway Station", "Packed Platform", "🫠"],
+  ["packed platform+weather", "Packed Platform", "Weather", "Summer Subway Heat", "🥵"],
+  ["packed platform+person", "Packed Platform", "Person", "Personal Space Crisis", "😬"],
+
+  ["person+times square", "Person", "Times Square", "Tourist", "📸"],
+  ["subway performer+tourist", "Subway Performer", "Tourist", "Viral Video", "📱"],
+  ["subway station+times square", "Subway Station", "Times Square", "Times Square-42 St", "🚉"],
+  ["subway station+tourist", "Subway Station", "Tourist", "Subway Map Panic", "🗺️"],
+  ["subway map panic+time", "Subway Map Panic", "Time", "Wrong Train", "🚆"],
+  ["new yorker+wrong train", "New Yorker", "Wrong Train", "Directions in a Hurry", "👉"],
+  ["commuter+train delay", "Commuter", "Train Delay", "Late to Work", "😰"],
+  ["coffee+train delay", "Coffee", "Train Delay", "Emotional Support Coffee", "☕"],
+
+  ["neighborhood+place", "Neighborhood", "Place", "Borough", "🗺️"],
+  ["borough+culture", "Borough", "Culture", "Brooklyn", "🌉"],
+  ["borough+food", "Borough", "Food", "Queens", "🌎"],
+  ["borough+person", "Borough", "Person", "The Bronx", "🎤"],
+  ["borough+transit", "Borough", "Transit", "Manhattan", "🏙️"],
+  ["borough+weather", "Borough", "Weather", "Staten Island", "⛴️"],
+
+  ["brooklyn+place", "Brooklyn", "Place", "Brooklyn Bridge", "🌉"],
+  ["brooklyn+culture", "Brooklyn", "Culture", "Williamsburg", "☕"],
+  ["brooklyn+time", "Brooklyn", "Time", "Rooftop Party", "🌆"],
+  ["brooklyn+money", "Brooklyn", "Money", "Rising Rent", "📈"],
+  ["manhattan+place", "Manhattan", "Place", "Empire State Building", "🏙️"],
+  ["culture+manhattan", "Culture", "Manhattan", "Broadway", "🎭"],
+  ["manhattan+transit", "Manhattan", "Transit", "Grand Central", "🚉"],
+  ["food+queens", "Food", "Queens", "Queens Night Market", "🍢"],
+  ["queens+transit", "Queens", "Transit", "7 Train", "7️⃣"],
+  ["place+the bronx", "Place", "The Bronx", "Yankee Stadium", "⚾"],
+  ["culture+the bronx", "Culture", "The Bronx", "Hip Hop", "🎧"],
+
+  ["hip hop+new yorker", "Hip Hop", "New Yorker", "Cardi B", "💅"],
+  ["brooklyn+hip hop", "Brooklyn", "Hip Hop", "Jay-Z", "🎧"],
+  ["hip hop+manhattan", "Hip Hop", "Manhattan", "Alicia Keys", "🎹"],
+  ["brooklyn+street artist", "Brooklyn", "Street Artist", "Spike Lee", "🎬"],
+  ["culture+staten island", "Culture", "Staten Island", "Pete Davidson", "😂"],
+  ["broadway+culture", "Broadway", "Culture", "Lin-Manuel Miranda", "🎼"],
+  ["culture+queens", "Culture", "Queens", "Nas", "🎤"],
+
+  ["new yorker+yankee stadium", "New Yorker", "Yankee Stadium", "Yankees Fan", "🧢"],
+  ["7 train+tourist", "7 Train", "Tourist", "Mets Game", "⚾"],
+  ["manhattan+person", "Manhattan", "Person", "Spider-Man", "🕷️"],
+  ["empire state building+tourist", "Empire State Building", "Tourist", "King Kong Moment", "🦍"],
+
+  ["busy new yorker+new yorker", "Busy New Yorker", "New Yorker", "Walking Fast", "🚶"],
+  ["tourist+walking fast", "Tourist", "Walking Fast", "Sidewalk Rage", "😤"],
+  ["new yorker+subway flooding", "New Yorker", "Subway Flooding", "Deadass?", "😐"],
+  ["culture+deadass?", "Culture", "Deadass?", "NYC Slang", "🗣️"],
+  ["bodega cat+regular customer", "Bodega Cat", "Regular Customer", "Ock", "👨‍🍳"],
+  ["chopped cheese+ock", "Chopped Cheese", "Ock", "The Ocky Way", "🥪"],
+
+  ["payday+rent", "Payday", "Rent", "Rent Due", "😰"],
+  ["person+rent due", "Person", "Rent Due", "Landlord", "🔑"],
+  ["new yorker+rent", "New Yorker", "Rent", "Tiny Apartment", "📦"],
+  ["rising rent+williamsburg", "Rising Rent", "Williamsburg", "Gentrification", "🏗️"],
+  ["culture+time", "Culture", "Time", "Nightlife", "🌃"],
+  ["brooklyn+nightlife", "Brooklyn", "Nightlife", "Bushwick Party", "🪩"],
+  ["money+nightlife", "Money", "Nightlife", "Cover Charge", "💵"],
+  ["rooftop party+weather", "Rooftop Party", "Weather", "Rain Check", "☔"],
+  ["rent+rush hour", "Rent", "Rush Hour", "NYC Struggle", "😩"],
+  ["coffee+nyc struggle", "Coffee", "NYC Struggle", "Still Functioning", "🫡"],
 ];
 
 
@@ -355,4 +470,12 @@ export function resetDeviceData(deviceId) {
   });
 
   transaction();
+}
+
+export function getElementByName(name) {
+  return db.prepare(`
+    SELECT name, emoji
+    FROM elements
+    WHERE LOWER(name) = LOWER(?)
+  `).get(name);
 }

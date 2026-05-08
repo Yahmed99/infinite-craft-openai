@@ -11,7 +11,8 @@ import {
   getDeviceRecipe,
   insertDeviceRecipe,
   insertDeviceElement,
-  resetDeviceData
+  resetDeviceData,
+  getElementByName
 } from "./db.js";
 
 import { createEmbedding, generateCombination } from "./openai.js";
@@ -118,6 +119,12 @@ app.post("/api/combine", async (req, res) => {
     const neighbors = topSimilarRecipes(pairEmbedding, recipes, 8);
 
     const result = await generateCombination({ a, b, neighbors });
+
+    // If word has been generated (new combination old result) use the previous emoji
+    const existingElement = getElementByName(result.name);
+    if (existingElement) {
+      result.emoji = existingElement.emoji;
+    }
 
     // Save globally
     insertRecipe({

@@ -32,37 +32,45 @@ export async function generateCombination({ a, b, neighbors }) {
       {
         role: "system",
         content: `
-You are generating results for an Infinite Craft-style crafting game.
+You are generating results for an NYC-themed Infinite Craft-style crafting game.
 
 Return ONLY valid JSON:
 {"name":"Result","emoji":"✨"}
 
 The result must:
-- Be a real recognizable word or short phrase
+- Be a real recognizable word, place, phrase, event, food, person type, landmark, neighborhood, transit concept, or NYC cultural reference
+- Prefer New York City culture, places, foods, transit, slang, weather, events, boroughs, neighborhoods, and everyday city life
 - Be 1 or 2 words, rarely 3
-- Usually be a noun
+- Usually be a noun or common phrase
 - Feel like a natural combination of the two inputs
-- Prefer common concepts over weird invented ones
+- Prefer iconic, funny, or familiar NYC results over generic fantasy results
 - Reuse existing game-like concepts when possible
-- Avoid made-up compound phrases like "Sandy Wave Rider"
+- Avoid fake compound words like "Flareboard" or "Sandy Wave Rider"
 - Avoid simply gluing the input words together
-- Avoid adjectives unless the phrase is very common
-- Avoid overly specific results
+- Avoid overly obscure results unless they are clearly NYC-related
+- Avoid unsafe, hateful, sexual, or private-person content
 
 Good examples:
-Water + Fire = Steam
-Earth + Water = Mud
-Fire + Earth = Lava
-Wind + Water = Wave
-Wave + Beach = Surf
-Human + Fire = Cook
-Tree + Fire = Ash
+Food + Place = Bodega
+Food + Money = Dollar Slice
+Person + Transit = Commuter
+Transit + Time = Rush Hour
+Money + Place = Rent
+Culture + Place = Times Square
+Bodega + Food = Chopped Cheese
+Subway Station + Time = Train Delay
+Weather + Person = Forgot Umbrella
+Brooklyn + Culture = Williamsburg
+The Bronx + Culture = Hip Hop
+Money + Time = Payday
+Nightlife + Money = Cover Charge
 
 Bad examples:
 Sandy Wave Rider
 Oceanic Flame Person
-Fire Water Thing
-Windy Earth Object
+Transit Food Thing
+Money Weather Object
+Random Fantasy Kingdom
         `.trim()
       },
       {
@@ -71,10 +79,10 @@ Windy Earth Object
 Combine:
 ${a} + ${b}
 
-Similar existing recipes:
+Similar existing NYC-style recipes:
 ${neighborText}
 
-Return one clean result.
+Return one clean NYC-themed result. If no NYC-specific result makes sense, return a simple real-world result instead of inventing a word.
         `.trim()
       }
     ]
