@@ -1,6 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
+import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   allElements,
@@ -13,7 +14,12 @@ import {
   insertDeviceElement,
   resetDeviceData,
   getElementByName,
-  getGlobalGraphRows
+  getGlobalGraphRows,
+  getChallengeTarget,
+  createChallengeSession,
+  getChallengeSession,
+  finishChallengeSession,
+  getChallengeLeaderboard
 } from "./db.js";
 
 import { createEmbedding, generateCombination } from "./openai.js";
@@ -42,6 +48,15 @@ function getDeviceId(req) {
 const combineSchema = z.object({
   a: z.string().min(1).max(40),
   b: z.string().min(1).max(40)
+});
+
+const startChallengeSchema = z.object({
+  playerName: z.string().trim().min(1).max(24)
+});
+
+const finishChallengeSchema = z.object({
+  sessionId: z.string().uuid(),
+  resultName: z.string().min(1).max(60)
 });
 
 app.get("/api/health", (req, res) => {
@@ -115,6 +130,103 @@ app.get("/api/graph/global", (req, res) => {
   } catch (err) {
     console.error("Graph endpoint error:", err);
     res.status(500).json({ error: "Failed to load global graph" });
+  }
+});
+
+app.get("/api/challenge", (req, res) => {
+  const target = getChallengeTarget();
+
+  if (!target) {
+    return res.status(500).json({ error: "Challenge target is unavailable." });
+  }
+
+  res.json({
+    target,
+    leaderboard: getChallengeLeaderboard(target.name)
+  });
+});
+
+app.post("/api/challenge/start", (req, res) => {
+  try {
+    const deviceId = getDeviceId(req);
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing or invalid device ID." });
+    }
+
+    const body = startChallengeSchema.parse(req.body);
+    const target = getChallengeTarget();
+
+    if (!target) {
+      return res.status(500).json({ error: "Challenge target is unavailable." });
+    }
+
+    const sessionId = randomUUID();
+    const startedAtMs = Date.now();
+
+    resetDeviceData(deviceId);
+    createChallengeSession({
+      id: sessionId,
+      deviceId,
+      playerName: body.playerName.trim(),
+      targetName: target.name,
+      startedAtMs
+    });
+
+    res.json({
+      sessionId,
+      startedAtMs,
+      target,
+      elements: allDeviceElements(deviceId)
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Choose a player name." });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Could not start challenge." });
+  }
+});
+
+app.post("/api/challenge/finish", (req, res) => {
+  try {
+    const deviceId = getDeviceId(req);
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing or invalid device ID." });
+    }
+
+    const body = finishChallengeSchema.parse(req.body);
+    const session = getChallengeSession(body.sessionId);
+
+    if (!session || session.deviceId !== deviceId) {
+      return res.status(404).json({ error: "Challenge session not found." });
+    }
+
+    if (session.targetName.toLowerCase() !== body.resultName.trim().toLowerCase()) {
+      return res.status(400).json({ error: "That result is not the target word." });
+    }
+
+    const completedAtMs = Date.now();
+    const durationMs = Math.max(0, completedAtMs - session.startedAtMs);
+    const finished = finishChallengeSession({
+      id: session.id,
+      completedAtMs,
+      durationMs
+    });
+
+    res.json({
+      session: finished,
+      leaderboard: getChallengeLeaderboard(session.targetName)
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid challenge finish request." });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Could not finish challenge." });
   }
 });
 

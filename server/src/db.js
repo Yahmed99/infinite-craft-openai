@@ -47,6 +47,26 @@ CREATE TABLE IF NOT EXISTS device_recipes (
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(device_id, pair_key)
 );
+
+CREATE TABLE IF NOT EXISTS challenge_sessions (
+  id TEXT PRIMARY KEY,
+  device_id TEXT NOT NULL,
+  player_name TEXT NOT NULL,
+  target_name TEXT NOT NULL,
+  started_at_ms INTEGER NOT NULL,
+  completed_at_ms INTEGER,
+  duration_ms INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS challenge_scores (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  session_id TEXT NOT NULL UNIQUE,
+  device_id TEXT NOT NULL,
+  player_name TEXT NOT NULL,
+  target_name TEXT NOT NULL,
+  duration_ms INTEGER NOT NULL,
+  completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
 `);
 
 // const seedElements = [
@@ -385,4 +405,91 @@ export function getGlobalGraphRows() {
 
     ORDER BY r.id ASC
   `).all();
+}
+
+export function getChallengeTarget() {
+  return db.prepare(`
+    SELECT result_name AS name, result_emoji AS emoji
+    FROM recipes
+    WHERE result_name NOT IN ('Bodega', 'MetroCard', 'Neighborhood')
+    ORDER BY id DESC
+    LIMIT 1
+  `).get();
+}
+
+export function createChallengeSession({
+  id,
+  deviceId,
+  playerName,
+  targetName,
+  startedAtMs
+}) {
+  db.prepare(`
+    INSERT INTO challenge_sessions
+      (id, device_id, player_name, target_name, started_at_ms)
+    VALUES
+      (?, ?, ?, ?, ?)
+  `).run(id, deviceId, playerName, targetName, startedAtMs);
+}
+
+export function getChallengeSession(id) {
+  return db.prepare(`
+    SELECT
+      id,
+      device_id AS deviceId,
+      player_name AS playerName,
+      target_name AS targetName,
+      started_at_ms AS startedAtMs,
+      completed_at_ms AS completedAtMs,
+      duration_ms AS durationMs
+    FROM challenge_sessions
+    WHERE id = ?
+  `).get(id);
+}
+
+export function finishChallengeSession({ id, completedAtMs, durationMs }) {
+  const session = getChallengeSession(id);
+
+  if (!session || session.completedAtMs) {
+    return session;
+  }
+
+  const transaction = db.transaction(() => {
+    db.prepare(`
+      UPDATE challenge_sessions
+      SET completed_at_ms = ?, duration_ms = ?
+      WHERE id = ?
+    `).run(completedAtMs, durationMs, id);
+
+    db.prepare(`
+      INSERT OR IGNORE INTO challenge_scores
+        (session_id, device_id, player_name, target_name, duration_ms)
+      VALUES
+        (?, ?, ?, ?, ?)
+    `).run(
+      session.id,
+      session.deviceId,
+      session.playerName,
+      session.targetName,
+      durationMs
+    );
+  });
+
+  transaction();
+
+  return getChallengeSession(id);
+}
+
+export function getChallengeLeaderboard(targetName, limit = 10) {
+  return db.prepare(`
+    SELECT
+      player_name AS playerName,
+      target_name AS targetName,
+      duration_ms AS durationMs,
+      completed_at AS completedAt
+    FROM challenge_scores
+    WHERE LOWER(target_name) = LOWER(?)
+    ORDER BY duration_ms ASC, completed_at ASC
+    LIMIT ?
+  `).all(targetName, limit);
 }

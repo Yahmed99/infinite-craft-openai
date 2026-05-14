@@ -3,7 +3,7 @@ import { createRoot } from "react-dom/client";
 import ForceGraph2D from "react-force-graph-2d";
 import "./styles.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE;
+const API_BASE = import.meta.env.VITE_API_BASE || "http://localhost:8787";
 
 const STARTERS = [
   {
@@ -52,6 +52,19 @@ function getDeviceId() {
 }
 
 const DEVICE_ID = getDeviceId();
+
+function formatDuration(ms = 0) {
+  const safeMs = Math.max(0, Number(ms) || 0);
+  const minutes = Math.floor(safeMs / 60000);
+  const seconds = Math.floor((safeMs % 60000) / 1000);
+  const tenths = Math.floor((safeMs % 1000) / 100);
+
+  if (minutes > 0) {
+    return `${minutes}:${String(seconds).padStart(2, "0")}.${tenths}`;
+  }
+
+  return `${seconds}.${tenths}s`;
+}
 
 function MapPage({ apiBase, graphVersion, onBack }) {
   const [graph, setGraph] = React.useState({ nodes: [], links: [] });
@@ -380,6 +393,98 @@ function MapPage({ apiBase, graphVersion, onBack }) {
   );
 }
 
+function Leaderboard({ scores = [] }) {
+  if (!scores.length) {
+    return <p className="empty">No winning runs yet. Set the first time.</p>;
+  }
+
+  return (
+    <ol className="leaderboard">
+      {scores.map((score, index) => (
+        <li key={`${score.playerName}-${score.durationMs}-${index}`}>
+          <span className="rank">{index + 1}</span>
+          <span>{score.playerName}</span>
+          <strong>{formatDuration(score.durationMs)}</strong>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function LandingPage({
+  target,
+  leaderboard,
+  playerName,
+  onPlayerNameChange,
+  onStart,
+  onExplore,
+  loading,
+  error,
+}) {
+  return (
+    <main className="landing">
+      <section className="landingHero">
+        <div className="landingArt" aria-hidden="true">
+          <span>Person</span>
+          <span>Transit</span>
+          <span>Food</span>
+          <span>Culture</span>
+          <b>{target?.name || "Target"}</b>
+        </div>
+
+        <div className="landingCopy">
+          <p className="eyebrow">Fastest craft wins</p>
+          <h1>NYCrafts Sprint</h1>
+          <p className="subtitle">
+            Race from the starter set to the selected word. The clock starts
+            when you enter the arena and stops the moment your craft creates
+            the target.
+          </p>
+
+          <form className="startForm" onSubmit={onStart}>
+            <label>
+              Player name
+              <input
+                className="search"
+                value={playerName}
+                maxLength={24}
+                onChange={(event) => onPlayerNameChange(event.target.value)}
+                placeholder="Your name"
+              />
+            </label>
+
+            <div className="targetCallout">
+              <span>Target word</span>
+              <strong>
+                {target?.emoji} {target?.name || "Loading..."}
+              </strong>
+            </div>
+
+            {error && <div className="error">{error}</div>}
+
+            <div className="heroActions">
+              <button className="primaryButton" type="submit" disabled={loading}>
+                {loading ? "Starting..." : "Start Race"}
+              </button>
+              <button className="ghostButton" type="button" onClick={onExplore}>
+                Free Craft
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <section className="landingBoard">
+        <div className="panelHeader">
+          <h2>Fastest times</h2>
+          <span>{leaderboard.length}</span>
+        </div>
+        <Leaderboard scores={leaderboard} />
+      </section>
+    </main>
+  );
+}
+
 function App() {
   const [elements, setElements] = useState(STARTERS);
   const [selected, setSelected] = useState([]);
@@ -387,8 +492,16 @@ function App() {
   const [query, setQuery] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [page, setPage] = useState("craft");
+  const [page, setPage] = useState("landing");
   const [graphVersion, setGraphVersion] = useState(0);
+  const [playerName, setPlayerName] = useState(
+    localStorage.getItem("player_name") || "",
+  );
+  const [target, setTarget] = useState(null);
+  const [leaderboard, setLeaderboard] = useState([]);
+  const [challenge, setChallenge] = useState(null);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [winner, setWinner] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/elements`, {
@@ -404,6 +517,28 @@ function App() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    fetch(`${API_BASE}/api/challenge`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.target) setTarget(data.target);
+        if (Array.isArray(data.leaderboard)) setLeaderboard(data.leaderboard);
+      })
+      .catch(() => {
+        setError("Could not load the race target.");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!challenge || challenge.completed) return undefined;
+
+    const tick = () => setElapsedMs(Date.now() - challenge.startedAtMs);
+    tick();
+    const timer = window.setInterval(tick, 100);
+
+    return () => window.clearInterval(timer);
+  }, [challenge]);
 
   const filteredElements = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -421,6 +556,98 @@ function App() {
 
       return exists ? current : [...current, next];
     });
+  }
+
+  async function startChallenge(event) {
+    event.preventDefault();
+
+    const trimmedName = playerName.trim();
+
+    if (!trimmedName) {
+      setError("Enter a player name before starting.");
+      return;
+    }
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE}/api/challenge/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": DEVICE_ID,
+        },
+        body: JSON.stringify({
+          playerName: trimmedName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not start challenge.");
+      }
+
+      localStorage.setItem("player_name", trimmedName);
+      setPlayerName(trimmedName);
+      setTarget(data.target);
+      setElements(data.elements || STARTERS);
+      setHistory([]);
+      setSelected([]);
+      setQuery("");
+      setWinner(null);
+      setElapsedMs(0);
+      setChallenge({
+        sessionId: data.sessionId,
+        startedAtMs: data.startedAtMs,
+        completed: false,
+      });
+      setPage("craft");
+      setGraphVersion((current) => current + 1);
+    } catch (err) {
+      setError(err.message || "Could not start challenge.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finishChallenge(resultName) {
+    if (!challenge || challenge.completed) return;
+
+    try {
+      const response = await fetch(`${API_BASE}/api/challenge/finish`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-Device-Id": DEVICE_ID,
+        },
+        body: JSON.stringify({
+          sessionId: challenge.sessionId,
+          resultName,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not finish challenge.");
+      }
+
+      setChallenge((current) =>
+        current
+          ? {
+              ...current,
+              completed: true,
+            }
+          : current,
+      );
+      setElapsedMs(data.session.durationMs);
+      setWinner(data.session);
+      setLeaderboard(data.leaderboard || []);
+    } catch (err) {
+      setError(err.message || "Could not finish challenge.");
+    }
   }
 
   async function choose(element) {
@@ -480,6 +707,15 @@ function App() {
       ]);
 
       setGraphVersion((current) => current + 1);
+
+      if (
+        challenge &&
+        !challenge.completed &&
+        target &&
+        result.name.toLowerCase() === target.name.toLowerCase()
+      ) {
+        await finishChallenge(result.name);
+      }
     } catch (err) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -506,22 +742,34 @@ function App() {
       setHistory([]);
       setQuery("");
       setElements(STARTERS);
+      setChallenge(null);
+      setWinner(null);
+      setElapsedMs(0);
       setGraphVersion((current) => current + 1);
     } catch (err) {
       setError("Could not reset progress.");
     }
   }
 
+  if (page === "landing") {
+    return (
+      <LandingPage
+        target={target}
+        leaderboard={leaderboard}
+        playerName={playerName}
+        onPlayerNameChange={setPlayerName}
+        onStart={startChallenge}
+        onExplore={() => {
+          setError("");
+          setPage("craft");
+        }}
+        loading={busy}
+        error={error}
+      />
+    );
+  }
+
   if (page === "map") {
-    function configureForces() {
-      if (!graphRef.current) return;
-
-      const fg = graphRef.current;
-
-      fg.d3Force("charge").strength(-260);
-      fg.d3Force("link").distance(95);
-      fg.d3Force("center").strength(0.045);
-    }
     return (
       <MapPage
         apiBase={API_BASE}
@@ -535,17 +783,22 @@ function App() {
     <main className="page">
       <section className="hero">
         <div>
-          <p className="eyebrow">OpenAI + embeddings</p>
-          <h1>NYCrafts CTP</h1>
+          <p className="eyebrow">
+            {challenge ? "Race in progress" : "OpenAI + embeddings"}
+          </p>
+          <h1>{challenge ? "Find the Word" : "NYCrafts CTP"}</h1>
           <p className="subtitle">
-            Combine NYC food, transit chaos, boroughs, slang, famous figures,
-            nightlife, landmarks, and everyday city moments into funny local
-            discoveries. Click any two elements to combine them. New recipes are
-            generated once, cached, and remembered.
+            {challenge
+              ? "Combine any two elements until you craft the selected target. Your official score is the server-timed run duration."
+              : "Combine NYC food, transit chaos, boroughs, slang, famous figures, nightlife, landmarks, and everyday city moments into funny local discoveries."}
           </p>
         </div>
 
         <div className="heroActions">
+          <button className="ghostButton" onClick={() => setPage("landing")}>
+            Race Home
+          </button>
+
           <button className="ghostButton" onClick={() => setPage("map")}>
             Map
           </button>
@@ -555,6 +808,33 @@ function App() {
           </button>
         </div>
       </section>
+
+      <section className="gameBar">
+        <div>
+          <span className="muted">Target</span>
+          <strong>{target ? `${target.emoji} ${target.name}` : "Free craft"}</strong>
+        </div>
+        <div>
+          <span className="muted">Time</span>
+          <strong>{formatDuration(elapsedMs)}</strong>
+        </div>
+        <div>
+          <span className="muted">Player</span>
+          <strong>{playerName || "Guest"}</strong>
+        </div>
+      </section>
+
+      {winner && (
+        <section className="winBanner">
+          <div>
+            <span className="muted">Finished</span>
+            <strong>{formatDuration(winner.durationMs)}</strong>
+          </div>
+          <button className="primaryButton" onClick={() => setPage("landing")}>
+            View Standings
+          </button>
+        </section>
+      )}
 
       <section className="selectedPanel">
         <div>

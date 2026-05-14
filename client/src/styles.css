@@ -4,7 +4,7 @@
 
 :root {
   color: #172033;
-  background: #f6f1e8;
+  background: #f4f7fb;
   font-family:
     Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
@@ -25,6 +25,128 @@ input {
   padding: 40px 0;
 }
 
+.landing {
+  width: min(1180px, calc(100% - 32px));
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 28px 0;
+  display: grid;
+  align-content: center;
+  gap: 18px;
+}
+
+.landingHero {
+  min-height: min(700px, calc(100vh - 180px));
+  display: grid;
+  grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+  gap: 28px;
+  align-items: center;
+}
+
+.landingArt {
+  min-height: 520px;
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: #101827;
+  box-shadow: 0 22px 70px rgba(15, 23, 42, 0.16);
+}
+
+.landingArt span,
+.landingArt b {
+  position: absolute;
+  display: inline-flex;
+  align-items: center;
+  min-height: 46px;
+  border-radius: 8px;
+  padding: 10px 14px;
+  color: #f8fafc;
+  font-weight: 900;
+  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.22);
+}
+
+.landingArt span:nth-child(1) {
+  left: 10%;
+  top: 16%;
+  background: #2f80ed;
+}
+
+.landingArt span:nth-child(2) {
+  right: 8%;
+  top: 26%;
+  background: #10b981;
+}
+
+.landingArt span:nth-child(3) {
+  left: 18%;
+  bottom: 26%;
+  background: #f97316;
+}
+
+.landingArt span:nth-child(4) {
+  right: 16%;
+  bottom: 15%;
+  background: #8b5cf6;
+}
+
+.landingArt b {
+  left: 50%;
+  top: 50%;
+  min-width: 180px;
+  justify-content: center;
+  transform: translate(-50%, -50%);
+  background: #f8fafc;
+  color: #101827;
+  font-size: 1.35rem;
+}
+
+.landingCopy {
+  max-width: 640px;
+}
+
+.startForm {
+  margin-top: 26px;
+  display: grid;
+  gap: 14px;
+}
+
+.startForm label {
+  display: grid;
+  gap: 8px;
+  color: #4b5563;
+  font-weight: 800;
+}
+
+.targetCallout,
+.gameBar,
+.winBanner,
+.landingBoard {
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.86);
+}
+
+.targetCallout {
+  padding: 14px;
+  display: grid;
+  gap: 4px;
+}
+
+.targetCallout span {
+  color: #717989;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.targetCallout strong {
+  font-size: 1.35rem;
+}
+
+.landingBoard {
+  padding: 18px;
+}
+
 .hero {
   display: flex;
   justify-content: space-between;
@@ -39,7 +161,7 @@ input {
   letter-spacing: 0.12em;
   font-size: 0.78rem;
   font-weight: 800;
-  color: #866d3c;
+  color: #2563eb;
 }
 
 h1 {
@@ -61,21 +183,34 @@ h2 {
   line-height: 1.6;
 }
 
+.primaryButton,
 .ghostButton {
-  border: 1px solid #d7cbb5;
+  border: 1px solid #cbd5e1;
   background: rgba(255, 255, 255, 0.5);
   color: #172033;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 10px 14px;
   cursor: pointer;
+}
+
+.primaryButton {
+  border-color: #172033;
+  background: #172033;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.primaryButton:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .selectedPanel,
 .panel {
   background: rgba(255, 255, 255, 0.76);
-  border: 1px solid #e2d8c8;
-  border-radius: 28px;
-  box-shadow: 0 18px 60px rgba(40, 30, 10, 0.08);
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  box-shadow: 0 18px 60px rgba(15, 23, 42, 0.08);
 }
 
 .selectedPanel {
@@ -120,19 +255,19 @@ h2 {
 }
 
 .panelHeader span {
-  background: #f1eadf;
-  border-radius: 999px;
+  background: #eaf0f8;
+  border-radius: 8px;
   padding: 4px 10px;
-  color: #6f624d;
+  color: #334155;
   font-weight: 800;
   font-size: 0.82rem;
 }
 
 .search {
   width: 100%;
-  border: 1px solid #ded2bf;
-  background: #fffaf2;
-  border-radius: 16px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  border-radius: 8px;
   padding: 12px 14px;
   outline: none;
   margin-bottom: 14px;
@@ -149,10 +284,10 @@ h2 {
 }
 
 .elementButton {
-  border: 1px solid #ddd1bf;
-  background: #fffbf5;
+  border: 1px solid #d7deea;
+  background: #ffffff;
   color: #172033;
-  border-radius: 999px;
+  border-radius: 8px;
   padding: 10px 13px;
   cursor: pointer;
   display: inline-flex;
@@ -177,9 +312,9 @@ h2 {
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  border: 1px solid #ddd1bf;
-  background: #fffbf5;
-  border-radius: 999px;
+  border: 1px solid #d7deea;
+  background: #ffffff;
+  border-radius: 8px;
   padding: 8px 11px;
   font-weight: 700;
   white-space: nowrap;
@@ -187,12 +322,12 @@ h2 {
 
 .activeChip {
   background: #172033;
-  color: #fffaf2;
+  color: #ffffff;
   border-color: #172033;
 }
 
 .loader {
-  color: #866d3c;
+  color: #2563eb;
   font-weight: 800;
 }
 
@@ -216,9 +351,9 @@ h2 {
 }
 
 .recipe {
-  border: 1px solid #e3d8c8;
-  background: #fffaf2;
-  border-radius: 20px;
+  border: 1px solid #d7deea;
+  background: #ffffff;
+  border-radius: 8px;
   padding: 14px;
 }
 
@@ -243,13 +378,141 @@ h2 {
   color: #f97316;
   font-weight: 800;
 }
+
+.heroActions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.gameBar,
+.winBanner {
+  margin-bottom: 18px;
+  padding: 14px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.gameBar strong,
+.winBanner strong {
+  display: block;
+  font-size: 1.2rem;
+}
+
+.winBanner {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: #ecfdf5;
+  border-color: #86efac;
+}
+
+.leaderboard {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.leaderboard li {
+  min-height: 48px;
+  display: grid;
+  grid-template-columns: 42px 1fr auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  padding: 10px;
+  background: #ffffff;
+}
+
+.rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: #172033;
+  color: #ffffff;
+  font-weight: 900;
+}
+
+.map-page {
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.map-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 16px;
+}
+
+.map-shell {
+  height: 70vh;
+  border: 1px solid #d7deea;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+}
+
+.map-legend {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+  font-weight: 800;
+}
+
+.dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.selected-dot {
+  background: #111827;
+}
+
+.incoming-dot {
+  background: #2563eb;
+}
+
+.outgoing-dot {
+  background: #f97316;
+}
 @media (max-width: 820px) {
   .hero,
   .selectedPanel {
     flex-direction: column;
   }
 
+  .landingHero,
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .landingHero {
+    min-height: auto;
+  }
+
+  .landingArt {
+    min-height: 320px;
+  }
+
+  .gameBar,
+  .winBanner {
+    grid-template-columns: 1fr;
+  }
+
+  .heroActions {
+    justify-content: flex-start;
   }
 }
