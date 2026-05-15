@@ -18,6 +18,9 @@ import {
   getChallengeTarget,
   createChallengeSession,
   getChallengeSession,
+  getChallengeActiveDurationMs,
+  setChallengePause,
+  cancelChallengeSession,
   finishChallengeSession,
   getChallengeLeaderboard
 } from "./db.js";
@@ -57,6 +60,15 @@ const startChallengeSchema = z.object({
 const finishChallengeSchema = z.object({
   sessionId: z.string().uuid(),
   resultName: z.string().min(1).max(60)
+});
+
+const pauseChallengeSchema = z.object({
+  sessionId: z.string().uuid(),
+  paused: z.boolean()
+});
+
+const cancelChallengeSchema = z.object({
+  sessionId: z.string().uuid()
 });
 
 app.get("/api/health", (req, res) => {
@@ -189,6 +201,78 @@ app.post("/api/challenge/start", (req, res) => {
   }
 });
 
+app.post("/api/challenge/pause", (req, res) => {
+  try {
+    const deviceId = getDeviceId(req);
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing or invalid device ID." });
+    }
+
+    const body = pauseChallengeSchema.parse(req.body);
+    const session = getChallengeSession(body.sessionId);
+
+    if (!session || session.deviceId !== deviceId) {
+      return res.status(404).json({ error: "Challenge session not found." });
+    }
+
+    if (session.completedAtMs) {
+      return res.status(400).json({ error: "Challenge is already finished." });
+    }
+
+    const updated = setChallengePause({
+      id: session.id,
+      paused: body.paused
+    });
+
+    res.json({
+      session: updated,
+      elapsedMs: getChallengeActiveDurationMs(updated)
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid pause request." });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Could not update challenge pause." });
+  }
+});
+
+app.post("/api/challenge/cancel", (req, res) => {
+  try {
+    const deviceId = getDeviceId(req);
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing or invalid device ID." });
+    }
+
+    const body = cancelChallengeSchema.parse(req.body);
+    const session = getChallengeSession(body.sessionId);
+
+    if (!session || session.deviceId !== deviceId) {
+      return res.status(404).json({ error: "Challenge session not found." });
+    }
+
+    if (session.completedAtMs) {
+      return res.status(400).json({ error: "Challenge is already finished." });
+    }
+
+    const cancelled = cancelChallengeSession({
+      id: session.id
+    });
+
+    res.json({ session: cancelled });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Invalid cancel request." });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Could not cancel challenge." });
+  }
+});
+
 app.post("/api/challenge/finish", (req, res) => {
   try {
     const deviceId = getDeviceId(req);
@@ -209,7 +293,17 @@ app.post("/api/challenge/finish", (req, res) => {
     }
 
     const completedAtMs = Date.now();
-    const durationMs = Math.max(0, completedAtMs - session.startedAtMs);
+
+    if (session.pausedAtMs) {
+      setChallengePause({
+        id: session.id,
+        paused: false,
+        now: completedAtMs
+      });
+    }
+
+    const activeSession = getChallengeSession(session.id);
+    const durationMs = getChallengeActiveDurationMs(activeSession, completedAtMs);
     const finished = finishChallengeSession({
       id: session.id,
       completedAtMs,

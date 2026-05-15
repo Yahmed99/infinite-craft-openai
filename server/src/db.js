@@ -55,7 +55,9 @@ CREATE TABLE IF NOT EXISTS challenge_sessions (
   target_name TEXT NOT NULL,
   started_at_ms INTEGER NOT NULL,
   completed_at_ms INTEGER,
-  duration_ms INTEGER
+  duration_ms INTEGER,
+  paused_ms INTEGER NOT NULL DEFAULT 0,
+  paused_at_ms INTEGER
 );
 
 CREATE TABLE IF NOT EXISTS challenge_scores (
@@ -68,6 +70,21 @@ CREATE TABLE IF NOT EXISTS challenge_scores (
   completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 `);
+
+const challengeSessionColumns = db
+  .prepare(`PRAGMA table_info(challenge_sessions)`)
+  .all()
+  .map((column) => column.name);
+
+if (!challengeSessionColumns.includes("paused_ms")) {
+  db.exec(
+    `ALTER TABLE challenge_sessions ADD COLUMN paused_ms INTEGER NOT NULL DEFAULT 0`,
+  );
+}
+
+if (!challengeSessionColumns.includes("paused_at_ms")) {
+  db.exec(`ALTER TABLE challenge_sessions ADD COLUMN paused_at_ms INTEGER`);
+}
 
 // const seedElements = [
 //   ["Water", "💧"],
@@ -441,10 +458,70 @@ export function getChallengeSession(id) {
       target_name AS targetName,
       started_at_ms AS startedAtMs,
       completed_at_ms AS completedAtMs,
-      duration_ms AS durationMs
+      duration_ms AS durationMs,
+      paused_ms AS pausedMs,
+      paused_at_ms AS pausedAtMs
     FROM challenge_sessions
     WHERE id = ?
   `).get(id);
+}
+
+export function getChallengeActiveDurationMs(session, now = Date.now()) {
+  if (!session) return 0;
+
+  let pausedMs = session.pausedMs || 0;
+
+  if (session.pausedAtMs) {
+    pausedMs += now - session.pausedAtMs;
+  }
+
+  return Math.max(0, now - session.startedAtMs - pausedMs);
+}
+
+export function setChallengePause({ id, paused, now = Date.now() }) {
+  const session = getChallengeSession(id);
+
+  if (!session || session.completedAtMs) {
+    return session;
+  }
+
+  if (paused && !session.pausedAtMs) {
+    db.prepare(`
+      UPDATE challenge_sessions
+      SET paused_at_ms = ?
+      WHERE id = ?
+    `).run(now, id);
+  } else if (!paused && session.pausedAtMs) {
+    db.prepare(`
+      UPDATE challenge_sessions
+      SET
+        paused_ms = paused_ms + (? - paused_at_ms),
+        paused_at_ms = NULL
+      WHERE id = ?
+    `).run(now, id);
+  }
+
+  return getChallengeSession(id);
+}
+
+export function cancelChallengeSession({ id, cancelledAtMs = Date.now() }) {
+  const session = getChallengeSession(id);
+
+  if (!session || session.completedAtMs) {
+    return session;
+  }
+
+  if (session.pausedAtMs) {
+    setChallengePause({ id, paused: false, now: cancelledAtMs });
+  }
+
+  db.prepare(`
+    UPDATE challenge_sessions
+    SET completed_at_ms = ?
+    WHERE id = ?
+  `).run(cancelledAtMs, id);
+
+  return getChallengeSession(id);
 }
 
 export function finishChallengeSession({ id, completedAtMs, durationMs }) {
