@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://infinite-craft-openai.onrender.com/api/:path*"
+    }
+  ]
+}
