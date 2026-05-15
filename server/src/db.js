@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import Database from "better-sqlite3";
 import { pairKey } from "./utils.js";
 
@@ -69,6 +70,11 @@ CREATE TABLE IF NOT EXISTS challenge_scores (
   duration_ms INTEGER NOT NULL,
   completed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS daily_challenge_targets (
+  date_key TEXT PRIMARY KEY,
+  recipe_id INTEGER NOT NULL
+);
 `);
 
 const challengeSessionColumns = db
@@ -84,6 +90,38 @@ if (!challengeSessionColumns.includes("paused_ms")) {
 
 if (!challengeSessionColumns.includes("paused_at_ms")) {
   db.exec(`ALTER TABLE challenge_sessions ADD COLUMN paused_at_ms INTEGER`);
+}
+
+function getDailyChallengeDateKey() {
+  const timeZone =
+    process.env.CHALLENGE_DAILY_TZ?.trim() || "America/New_York";
+
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+
+  if (!y || !m || !d) {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  return `${y}-${m}-${d}`;
+}
+
+function dailyTargetPickIndex(seed, modulo) {
+  if (modulo <= 0) return 0;
+
+  const hash = createHash("sha256").update(seed).digest();
+  const n =
+    (hash.readUInt32BE(0) ^ hash.readUInt32BE(4) ^ hash.readUInt32BE(8)) >>> 0;
+
+  return n % modulo;
 }
 
 // const seedElements = [
@@ -425,13 +463,44 @@ export function getGlobalGraphRows() {
 }
 
 export function getChallengeTarget() {
-  return db.prepare(`
-    SELECT result_name AS name, result_emoji AS emoji
+  const dateKey = getDailyChallengeDateKey();
+
+  const cached = db.prepare(`
+    SELECT r.result_name AS name, r.result_emoji AS emoji
+    FROM daily_challenge_targets d
+    JOIN recipes r ON r.id = d.recipe_id
+    WHERE d.date_key = ?
+  `).get(dateKey);
+
+  if (cached) {
+    return cached;
+  }
+
+  const rows = db.prepare(`
+    SELECT id, result_name AS name, result_emoji AS emoji
     FROM recipes
     WHERE result_name NOT IN ('Bodega', 'MetroCard', 'Neighborhood')
-    ORDER BY id DESC
-    LIMIT 1
-  `).get();
+    ORDER BY id ASC
+  `).all();
+
+  if (!rows.length) {
+    return null;
+  }
+
+  const idx = dailyTargetPickIndex(`nycrafts-daily-target:v1:${dateKey}`, rows.length);
+  const picked = rows[idx];
+
+  db.prepare(`
+    INSERT OR IGNORE INTO daily_challenge_targets (date_key, recipe_id)
+    VALUES (?, ?)
+  `).run(dateKey, picked.id);
+
+  return db.prepare(`
+    SELECT r.result_name AS name, r.result_emoji AS emoji
+    FROM daily_challenge_targets d
+    JOIN recipes r ON r.id = d.recipe_id
+    WHERE d.date_key = ?
+  `).get(dateKey);
 }
 
 export function createChallengeSession({
