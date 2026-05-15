@@ -4,5 +4,9 @@ node_modules
 craft.db
 craft.db-shm
 craft.db-wal
+challenge-dev.db
+challenge-dev.db-shm
+challenge-dev.db-wal
+dev-*.log
 dist
 .DS_Store
