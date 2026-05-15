@@ -3,9 +3,10 @@ import { createRoot } from "react-dom/client";
 import ForceGraph2D from "react-force-graph-2d";
 import "./styles.css";
 
-const API_BASE =
-  import.meta.env.VITE_API_BASE ||
-  (import.meta.env.DEV ? "http://localhost:8787" : "");
+// Production uses same-origin /api (proxied to Render on Vercel). Dev uses local API.
+const API_BASE = import.meta.env.DEV
+  ? import.meta.env.VITE_API_BASE || "http://localhost:8787"
+  : "";
 
 const STARTERS = [
   {
