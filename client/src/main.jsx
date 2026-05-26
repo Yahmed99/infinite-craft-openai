@@ -43,6 +43,14 @@ const STARTERS = [
   },
 ];
 
+const STARTER_NAMES = new Set(
+  STARTERS.map((item) => item.name.trim().toLowerCase()),
+);
+
+function isStarterCraft(name) {
+  return STARTER_NAMES.has(String(name ?? "").trim().toLowerCase());
+}
+
 function getDeviceId() {
   let id = localStorage.getItem("device_id");
 
@@ -150,17 +158,24 @@ function AppShell({
   );
 }
 
+const MAP_SEARCH_RESULT_LIMIT = 25;
+
 function MapPage({ apiBase, graphVersion }) {
   const [graph, setGraph] = React.useState({ nodes: [], links: [] });
   const [selectedNode, setSelectedNode] = React.useState(null);
+  const [query, setQuery] = React.useState("");
+  const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const graphRef = React.useRef(null);
+  const pendingFocusId = React.useRef(null);
 
   React.useEffect(() => {
     let cancelled = false;
 
     async function loadGraph() {
       try {
+        setLoading(true);
+        pendingFocusId.current = null;
         setError("");
 
         const res = await fetch(`${apiBase}/api/graph/global`);
@@ -173,15 +188,26 @@ function MapPage({ apiBase, graphVersion }) {
 
         if (cancelled) return;
 
-        setGraph({
-          nodes: data.nodes || [],
-          links: data.edges || [],
+        const nodes = data.nodes || [];
+        const links = data.edges || [];
+
+        setGraph({ nodes, links });
+        setSelectedNode((current) => {
+          if (!current) return null;
+
+          return (
+            nodes.find((node) => String(node.id) === String(current.id)) || null
+          );
         });
       } catch (err) {
         console.error(err);
 
         if (!cancelled) {
           setError("Could Not Load Global Recipe Map.");
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
         }
       }
     }
@@ -295,13 +321,231 @@ function MapPage({ apiBase, graphVersion }) {
     return String(link.id);
   }
 
+  const filteredNodes = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+
+    if (!q) return [];
+
+    return graph.nodes
+      .filter((node) => String(node.label || "").toLowerCase().includes(q))
+      .sort((a, b) => String(a.label).localeCompare(String(b.label)));
+  }, [graph.nodes, query]);
+
+  const visibleSearchResults = filteredNodes.slice(0, MAP_SEARCH_RESULT_LIMIT);
+  const hiddenSearchCount = Math.max(
+    0,
+    filteredNodes.length - visibleSearchResults.length,
+  );
+
+  const directConnections = React.useMemo(() => {
+    if (!selectedNode) {
+      return { incoming: [], outgoing: [] };
+    }
+
+    const selected = getNodeId(selectedNode);
+    const incoming = [];
+    const outgoing = [];
+    const incomingIds = new Set();
+    const outgoingIds = new Set();
+
+    for (const link of graph.links) {
+      const source = String(
+        typeof link.source === "object" ? link.source.id : link.source,
+      );
+      const target = String(
+        typeof link.target === "object" ? link.target.id : link.target,
+      );
+
+      if (target === selected && !incomingIds.has(source)) {
+        incomingIds.add(source);
+        const node = graph.nodes.find((item) => getNodeId(item) === source);
+        if (node) incoming.push(node);
+      }
+
+      if (source === selected && !outgoingIds.has(target)) {
+        outgoingIds.add(target);
+        const node = graph.nodes.find((item) => getNodeId(item) === target);
+        if (node) outgoing.push(node);
+      }
+    }
+
+    incoming.sort((a, b) => String(a.label).localeCompare(String(b.label)));
+    outgoing.sort((a, b) => String(a.label).localeCompare(String(b.label)));
+
+    return { incoming, outgoing };
+  }, [selectedNode, graph.links, graph.nodes]);
+
+  function focusNode(node) {
+    if (!graphRef.current || node?.x == null || node?.y == null) return;
+
+    graphRef.current.centerAt(node.x, node.y, 600);
+    graphRef.current.zoom(2.2, 600);
+  }
+
+  function selectNode(node) {
+    setSelectedNode(node);
+    pendingFocusId.current = getNodeId(node);
+    focusNode(node);
+
+    if (node?.x != null && node?.y != null) {
+      pendingFocusId.current = null;
+    }
+  }
+
+  function handleEngineStop() {
+    configureForces();
+
+    if (!pendingFocusId.current) return;
+
+    const node = graph.nodes.find(
+      (item) => getNodeId(item) === pendingFocusId.current,
+    );
+
+    if (!node) {
+      pendingFocusId.current = null;
+      return;
+    }
+
+    focusNode(node);
+
+    if (node.x != null && node.y != null) {
+      pendingFocusId.current = null;
+    }
+  }
+
+  function handleSearchKeyDown(event) {
+    if (event.key !== "Enter" || filteredNodes.length === 0) return;
+
+    event.preventDefault();
+    selectNode(filteredNodes[0]);
+  }
+
   return (
     <>
       {error && <div className="error">{error}</div>}
 
       <section className="panel mapPanel">
+        <div className="mapSearchPanel">
+          <div className="panelHeader">
+            <h2>Search Crafts</h2>
+            <span>{loading ? "…" : graph.nodes.length}</span>
+          </div>
 
-      <div className="map-shell">
+          <input
+            className="search mapSearchInput"
+            placeholder="Search Crafts…"
+            value={query}
+            disabled={loading}
+            onChange={(event) => setQuery(event.target.value)}
+            onKeyDown={handleSearchKeyDown}
+          />
+
+          <div className="mapSearchResults">
+            {loading && <p className="empty">Loading Craft Graph…</p>}
+
+            {!loading && !query.trim() && (
+              <p className="empty">Type To Search Crafts In The Graph.</p>
+            )}
+
+            {!loading && query.trim() && filteredNodes.length === 0 && (
+              <p className="empty">No Crafts Match That Search.</p>
+            )}
+
+            {!loading &&
+              visibleSearchResults.map((node) => {
+                const isSelected =
+                  selectedNode && getNodeId(selectedNode) === getNodeId(node);
+
+                return (
+                  <button
+                    key={getNodeId(node)}
+                    type="button"
+                    className={
+                      isSelected
+                        ? "elementButton mapSearchItem active"
+                        : "elementButton mapSearchItem"
+                    }
+                    onClick={() => selectNode(node)}
+                  >
+                    <span>{node.emoji || "✨"}</span>
+                    {node.label}
+                  </button>
+                );
+              })}
+
+            {!loading && hiddenSearchCount > 0 && (
+              <p className="empty mapSearchMore">
+                +{hiddenSearchCount} More — Refine Your Search.
+              </p>
+            )}
+          </div>
+
+          {selectedNode && (
+            <div className="mapSelectedCraft">
+              <div className="mapSelectedSummary">
+                <span className="muted">Selected Craft</span>
+                <div className="mapSelectedHero">
+                  <span>{selectedNode.emoji || "✨"}</span>
+                  <strong>{selectedNode.label}</strong>
+                </div>
+              </div>
+
+              <div className="mapConnectionGroup">
+                <span className="mapConnectionLabel incoming-label">
+                  Parent ({directConnections.incoming.length})
+                </span>
+                {directConnections.incoming.length === 0 ? (
+                  <p className="empty mapConnectionEmpty">No Parent Crafts.</p>
+                ) : (
+                  <div className="mapConnectionList">
+                    {directConnections.incoming.map((node) => (
+                      <button
+                        key={`in-${getNodeId(node)}`}
+                        type="button"
+                        className="elementButton mapConnectionChip"
+                        onClick={() => selectNode(node)}
+                      >
+                        <span>{node.emoji || "✨"}</span>
+                        {node.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="mapConnectionGroup">
+                <span className="mapConnectionLabel outgoing-label">
+                  Child ({directConnections.outgoing.length})
+                </span>
+                {directConnections.outgoing.length === 0 ? (
+                  <p className="empty mapConnectionEmpty">No Child Crafts.</p>
+                ) : (
+                  <div className="mapConnectionList">
+                    {directConnections.outgoing.map((node) => (
+                      <button
+                        key={`out-${getNodeId(node)}`}
+                        type="button"
+                        className="elementButton mapConnectionChip"
+                        onClick={() => selectNode(node)}
+                      >
+                        <span>{node.emoji || "✨"}</span>
+                        {node.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div className="mapGraphColumn">
+          <div className="map-shell">
+            {loading && (
+              <div className="mapLoadingOverlay">
+                <div className="loader">Loading Graph…</div>
+              </div>
+            )}
         <ForceGraph2D
           ref={graphRef}
           graphData={graph}
@@ -314,15 +558,12 @@ function MapPage({ apiBase, graphVersion }) {
           warmupTicks={180}
           cooldownTicks={320}
           onEngineTick={configureForces}
-          onNodeClick={(node) => {
-            setSelectedNode(node);
-
-            if (graphRef.current) {
-              graphRef.current.centerAt(node.x, node.y, 600);
-              graphRef.current.zoom(2.2, 600);
-            }
+          onEngineStop={handleEngineStop}
+          onNodeClick={(node) => selectNode(node)}
+          onBackgroundClick={() => {
+            pendingFocusId.current = null;
+            setSelectedNode(null);
           }}
-          onBackgroundClick={() => setSelectedNode(null)}
           nodePointerAreaPaint={(node, color, ctx) => {
             ctx.fillStyle = color;
             ctx.beginPath();
@@ -458,6 +699,7 @@ function MapPage({ apiBase, graphVersion }) {
           <b className="dot outgoing-dot" /> Outgoing
         </span>
         </div>
+        </div>
       </section>
     </>
   );
@@ -482,71 +724,293 @@ function Leaderboard({ scores = [] }) {
 }
 
 function RacePage({
-  target,
+  mode,
+  onModeChange,
+  dailyTarget,
   leaderboard,
   playerName,
   onPlayerNameChange,
-  onStart,
-  onContinueRace,
+  onStartDaily,
+  onContinueDaily,
+  onContinuePractice,
   challenge,
+  practiceSession,
+  allCrafts,
+  craftsLoading,
+  practiceQuery,
+  onPracticeQueryChange,
+  practiceTarget,
+  onPracticeTargetChange,
+  onStartPractice,
   loading,
   error,
 }) {
   const raceActive = challenge && !challenge.completed;
+  const practiceActive = practiceSession && !practiceSession.completed;
+
+  const practiceCrafts = React.useMemo(
+    () => allCrafts.filter((craft) => !isStarterCraft(craft.name)),
+    [allCrafts],
+  );
+
+  const filteredCrafts = React.useMemo(() => {
+    const q = practiceQuery.trim().toLowerCase();
+
+    if (!q) return [];
+
+    return practiceCrafts.filter((craft) =>
+      String(craft.name || "").toLowerCase().includes(q),
+    );
+  }, [practiceCrafts, practiceQuery]);
+
+  const starterMatches = React.useMemo(() => {
+    const q = practiceQuery.trim().toLowerCase();
+
+    if (!q) return [];
+
+    return allCrafts.filter(
+      (craft) =>
+        isStarterCraft(craft.name) &&
+        String(craft.name || "").toLowerCase().includes(q),
+    );
+  }, [allCrafts, practiceQuery]);
+
+  const visibleCrafts = filteredCrafts.slice(0, MAP_SEARCH_RESULT_LIMIT);
+  const hiddenCraftCount = Math.max(
+    0,
+    filteredCrafts.length - visibleCrafts.length,
+  );
+
+  React.useEffect(() => {
+    if (practiceTarget && isStarterCraft(practiceTarget.name)) {
+      onPracticeTargetChange(null);
+    }
+  }, [practiceTarget, onPracticeTargetChange]);
 
   return (
     <>
       {raceActive && (
         <section className="statusBanner">
           <p>
-            Race In Progress For <strong>{playerName || "Guest"}</strong>.
+            Daily Challenge In Progress For{" "}
+            <strong>{playerName || "Guest"}</strong>.
           </p>
           <button
             className="primaryButton"
             type="button"
-            onClick={onContinueRace}
+            onClick={onContinueDaily}
           >
-            Continue Race
+            Continue Challenge
           </button>
         </section>
       )}
 
-      <div className="raceLayout">
-        <section className="panel racePanel">
-          <form className="startForm" onSubmit={onStart}>
-            <label>
-              Player Name
-              <input
-                className="search"
-                value={playerName}
-                maxLength={24}
-                onChange={(event) => onPlayerNameChange(event.target.value)}
-                placeholder="Your Name"
-              />
-            </label>
-
-            <div className="targetCallout">
-              <span>Target Word</span>
-              <strong>
-                {target?.emoji} {target?.name || "Loading..."}
-              </strong>
-            </div>
-
-            {error && <div className="error">{error}</div>}
-
-            <button className="primaryButton" type="submit" disabled={loading}>
-              {loading ? "Starting…" : raceActive ? "Restart Race" : "Start Race"}
-            </button>
-          </form>
+      {practiceActive && (
+        <section className="statusBanner">
+          <p>
+            Practice In Progress For{" "}
+            <strong>
+              {practiceSession.target.emoji} {practiceSession.target.name}
+            </strong>
+            .
+          </p>
+          <button
+            className="primaryButton"
+            type="button"
+            onClick={onContinuePractice}
+          >
+            Continue Practice
+          </button>
         </section>
+      )}
 
-        <section className="panel racePanel">
-          <div className="panelHeader">
-            <h2>Fastest Times</h2>
-            <span>{leaderboard.length}</span>
-          </div>
-          <Leaderboard scores={leaderboard} />
-        </section>
+      <div className="raceModeToggle">
+        <button
+          type="button"
+          className={
+            mode === "daily" ? "raceModeButton active" : "raceModeButton"
+          }
+          disabled={practiceActive}
+          title={
+            practiceActive
+              ? "Finish Or End Practice Before Switching Modes."
+              : undefined
+          }
+          onClick={() => onModeChange("daily")}
+        >
+          Daily Challenge
+        </button>
+        <button
+          type="button"
+          className={
+            mode === "practice" ? "raceModeButton active" : "raceModeButton"
+          }
+          disabled={raceActive}
+          title={
+            raceActive
+              ? "Finish Or Cancel The Daily Challenge Before Switching Modes."
+              : undefined
+          }
+          onClick={() => onModeChange("practice")}
+        >
+          Practice
+        </button>
+      </div>
+
+      <div className={mode === "daily" ? "raceLayout" : "raceLayout raceLayoutSingle"}>
+        {mode === "daily" ? (
+          <>
+            <section className="panel racePanel">
+              <form className="startForm" onSubmit={onStartDaily}>
+                <label>
+                  Player Name
+                  <input
+                    className="search"
+                    value={playerName}
+                    maxLength={24}
+                    onChange={(event) => onPlayerNameChange(event.target.value)}
+                    placeholder="Your Name"
+                  />
+                </label>
+
+                <div className="targetCallout">
+                  <span>Today&apos;s Target</span>
+                  <strong>
+                    {dailyTarget?.emoji} {dailyTarget?.name || "Loading..."}
+                  </strong>
+                </div>
+
+                {error && mode === "daily" && (
+                  <div className="error">{error}</div>
+                )}
+
+                <button
+                  className="primaryButton"
+                  type="submit"
+                  disabled={loading || !dailyTarget}
+                >
+                  {loading
+                    ? "Starting…"
+                    : raceActive
+                      ? "Restart Challenge"
+                      : "Start Daily Challenge"}
+                </button>
+              </form>
+            </section>
+
+            <section className="panel racePanel">
+              <div className="panelHeader">
+                <h2>Fastest Times</h2>
+                <span>{leaderboard.length}</span>
+              </div>
+              <Leaderboard scores={leaderboard} />
+            </section>
+          </>
+        ) : (
+          <>
+            <section className="panel racePanel">
+              <form className="startForm" onSubmit={onStartPractice}>
+                <div className="panelHeader">
+                  <h2>Choose Target Craft</h2>
+                  <span>{craftsLoading ? "…" : practiceCrafts.length}</span>
+                </div>
+
+                <input
+                  className="search"
+                  placeholder="Search Crafts To Combine Toward…"
+                  value={practiceQuery}
+                  disabled={craftsLoading}
+                  onChange={(event) => onPracticeQueryChange(event.target.value)}
+                />
+
+                <div className="practiceCraftList">
+                  {craftsLoading && (
+                    <p className="empty">Loading Crafts…</p>
+                  )}
+
+                  {!craftsLoading && !practiceQuery.trim() && (
+                    <p className="empty">
+                      Search For A Craft To Practice Reaching. Starter Elements
+                      Are Already Available.
+                    </p>
+                  )}
+
+                  {!craftsLoading &&
+                    practiceQuery.trim() &&
+                    filteredCrafts.length === 0 &&
+                    starterMatches.length > 0 && (
+                      <p className="empty">
+                        Starter Elements Are Already Available At The Start. Pick
+                        A Craft To Combine Toward.
+                      </p>
+                    )}
+
+                  {!craftsLoading &&
+                    practiceQuery.trim() &&
+                    filteredCrafts.length === 0 &&
+                    starterMatches.length === 0 && (
+                      <p className="empty">No Crafts Match That Search.</p>
+                    )}
+
+                  {!craftsLoading &&
+                    visibleCrafts.map((craft) => {
+                      const isSelected =
+                        practiceTarget &&
+                        practiceTarget.name.toLowerCase() ===
+                          craft.name.toLowerCase();
+
+                      return (
+                        <button
+                          key={craft.name}
+                          type="button"
+                          className={
+                            isSelected
+                              ? "elementButton practiceCraftItem active"
+                              : "elementButton practiceCraftItem"
+                          }
+                          onClick={() => onPracticeTargetChange(craft)}
+                        >
+                          <span>{craft.emoji || "✨"}</span>
+                          {craft.name}
+                        </button>
+                      );
+                    })}
+
+                  {!craftsLoading && hiddenCraftCount > 0 && (
+                    <p className="empty practiceCraftMore">
+                      +{hiddenCraftCount} More — Refine Your Search.
+                    </p>
+                  )}
+                </div>
+
+                {practiceTarget && (
+                  <div className="targetCallout">
+                    <span>Practice Target</span>
+                    <strong>
+                      {practiceTarget.emoji} {practiceTarget.name}
+                    </strong>
+                  </div>
+                )}
+
+                {error && mode === "practice" && (
+                  <div className="error">{error}</div>
+                )}
+
+                <button
+                  className="primaryButton"
+                  type="submit"
+                  disabled={loading || craftsLoading || !practiceTarget}
+                >
+                  {loading
+                    ? "Starting…"
+                    : practiceActive
+                      ? "Restart Practice"
+                      : "Start Practice"}
+                </button>
+              </form>
+            </section>
+          </>
+        )}
       </div>
     </>
   );
@@ -575,10 +1039,10 @@ function ResetPage({ onReset, busy, error, success }) {
   );
 }
 
-function getPageMeta(page, challenge) {
+function getPageMeta(page, challenge, practiceSession, practiceComplete) {
   if (page === "race") {
     return {
-      eyebrow: "Multiplayer Mode",
+      eyebrow: "Choose Your Mode",
       title: "NYCrafts Race",
     };
   }
@@ -586,10 +1050,20 @@ function getPageMeta(page, challenge) {
   if (page === "sandbox") {
     if (challenge && !challenge.completed) {
       return {
-        eyebrow: "Race In Progress",
+        eyebrow: "Daily Challenge",
         title: "Find The Word",
         subtitle:
           "Combine Elements Until You Craft The Target. Pause The Timer Anytime From The Game Bar.",
+      };
+    }
+
+    if (
+      (practiceSession && !practiceSession.completed) ||
+      (practiceComplete && practiceSession)
+    ) {
+      return {
+        eyebrow: "Practice Mode",
+        title: "Crafting Sandbox",
       };
     }
 
@@ -622,9 +1096,17 @@ function App() {
   const [playerName, setPlayerName] = useState(
     localStorage.getItem("player_name") || "",
   );
+  const [raceMode, setRaceMode] = useState("daily");
+  const [dailyTarget, setDailyTarget] = useState(null);
   const [target, setTarget] = useState(null);
   const [leaderboard, setLeaderboard] = useState([]);
   const [challenge, setChallenge] = useState(null);
+  const [practiceSession, setPracticeSession] = useState(null);
+  const [practiceComplete, setPracticeComplete] = useState(false);
+  const [allCrafts, setAllCrafts] = useState([]);
+  const [craftsLoading, setCraftsLoading] = useState(false);
+  const [practiceQuery, setPracticeQuery] = useState("");
+  const [practiceTarget, setPracticeTarget] = useState(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [winner, setWinner] = useState(null);
 
@@ -647,13 +1129,57 @@ function App() {
     fetch(`${API_BASE}/api/challenge`)
       .then((r) => r.json())
       .then((data) => {
-        if (data.target) setTarget(data.target);
+        if (data.target) setDailyTarget(data.target);
         if (Array.isArray(data.leaderboard)) setLeaderboard(data.leaderboard);
       })
       .catch(() => {
-        setError("Could Not Load The Race Target.");
+        setError("Could Not Load The Daily Challenge.");
       });
   }, []);
+
+  useEffect(() => {
+    if (raceMode !== "practice" || allCrafts.length > 0) return undefined;
+
+    let cancelled = false;
+
+    async function loadCrafts() {
+      try {
+        setCraftsLoading(true);
+
+        const response = await fetch(`${API_BASE}/api/elements/global`);
+
+        if (!response.ok) {
+          throw new Error("Could not load crafts.");
+        }
+
+        const data = await response.json();
+
+        if (cancelled) return;
+
+        setAllCrafts(
+          Array.isArray(data.elements)
+            ? [...data.elements].sort((a, b) =>
+                String(a.name).localeCompare(String(b.name)),
+              )
+            : [],
+        );
+      } catch {
+        if (!cancelled) {
+          setError("Could Not Load Crafts For Practice.");
+        }
+      } finally {
+        if (!cancelled) {
+          setCraftsLoading(false);
+        }
+      }
+    }
+
+    loadCrafts();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [raceMode, allCrafts.length]);
 
   useEffect(() => {
     if (!challenge || challenge.completed) return undefined;
@@ -689,6 +1215,64 @@ function App() {
     });
   }
 
+  function clearPracticeState() {
+    setPracticeSession(null);
+    setPracticeComplete(false);
+    setTarget(null);
+  }
+
+  function leavePracticeToRace() {
+    clearPracticeState();
+    navigate("race");
+  }
+
+  async function cancelActiveChallenge({
+    confirm = true,
+    navigateAfter = false,
+  } = {}) {
+    if (!challenge || challenge.completed) {
+      return true;
+    }
+
+    if (confirm) {
+      const confirmed = window.confirm(
+        "End this race? Your run will not be saved to the leaderboard.",
+      );
+
+      if (!confirmed) {
+        return false;
+      }
+    }
+
+    const response = await fetch(`${API_BASE}/api/challenge/cancel`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-Device-Id": DEVICE_ID,
+      },
+      body: JSON.stringify({
+        sessionId: challenge.sessionId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.error || "Could not cancel race.");
+    }
+
+    setChallenge(null);
+    setWinner(null);
+    setElapsedMs(0);
+    setSelected([]);
+
+    if (navigateAfter) {
+      navigate("race");
+    }
+
+    return true;
+  }
+
   async function startChallenge(event) {
     event.preventDefault();
 
@@ -697,6 +1281,23 @@ function App() {
     if (!trimmedName) {
       setError("Enter A Player Name Before Starting.");
       return;
+    }
+
+    if (!dailyTarget) {
+      setError("The Daily Challenge Is Not Ready Yet.");
+      return;
+    }
+
+    if (practiceSession && !practiceSession.completed) {
+      const confirmed = window.confirm(
+        "Starting a daily challenge will end your current practice session and reset progress. Continue?",
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    } else if (practiceSession || practiceComplete) {
+      clearPracticeState();
     }
 
     setBusy(true);
@@ -723,6 +1324,8 @@ function App() {
       localStorage.setItem("player_name", trimmedName);
       setPlayerName(trimmedName);
       setTarget(data.target);
+      setPracticeSession(null);
+      setPracticeComplete(false);
       setElements(data.elements || STARTERS);
       setHistory([]);
       setSelected([]);
@@ -745,41 +1348,111 @@ function App() {
     }
   }
 
-  async function cancelChallenge() {
-    if (!challenge || challenge.completed || busy) return;
+  async function startPractice(event) {
+    event.preventDefault();
 
-    const confirmed = window.confirm(
-      "End this race? Your run will not be saved to the leaderboard.",
-    );
+    const chosenTarget = practiceTarget || practiceSession?.target;
 
-    if (!confirmed) return;
+    if (!chosenTarget) {
+      setError("Choose A Target Craft Before Starting.");
+      return;
+    }
+
+    if (isStarterCraft(chosenTarget.name)) {
+      setError(
+        "Starter Elements Are Already Available. Pick A Craft To Combine Toward.",
+      );
+      return;
+    }
+
+    if (challenge && !challenge.completed) {
+      const confirmed = window.confirm(
+        "Starting practice will end your current daily challenge without saving a time. Continue?",
+      );
+
+      if (!confirmed) {
+        return;
+      }
+    }
 
     setBusy(true);
     setError("");
 
     try {
-      const response = await fetch(`${API_BASE}/api/challenge/cancel`, {
+      if (challenge && !challenge.completed) {
+        await cancelActiveChallenge({ confirm: false });
+      }
+
+      const response = await fetch(`${API_BASE}/api/practice/start`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           "X-Device-Id": DEVICE_ID,
         },
         body: JSON.stringify({
-          sessionId: challenge.sessionId,
+          targetName: chosenTarget.name,
         }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || "Could not cancel race.");
+        throw new Error(data.error || "Could not start practice.");
       }
 
       setChallenge(null);
       setWinner(null);
       setElapsedMs(0);
+      setTarget(data.target);
+      setPracticeTarget(data.target);
+      setPracticeComplete(false);
+      setPracticeSession({
+        target: data.target,
+        completed: false,
+      });
+      setElements(data.elements || STARTERS);
+      setHistory([]);
       setSelected([]);
-      navigate("race");
+      setQuery("");
+      setPage("sandbox");
+      setGraphVersion((current) => current + 1);
+    } catch (err) {
+      setError(err.message || "Could not start practice.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function endPractice() {
+    if (!practiceSession || practiceSession.completed) return;
+
+    const confirmed = window.confirm(
+      "End this practice session? Your current progress will stay on this device.",
+    );
+
+    if (!confirmed) return;
+
+    clearPracticeState();
+    setSelected([]);
+    navigate("race");
+  }
+
+  async function cancelChallenge() {
+    if (!challenge || challenge.completed || busy) return;
+
+    setBusy(true);
+    setError("");
+
+    try {
+      const cancelled = await cancelActiveChallenge({
+        confirm: true,
+        navigateAfter: true,
+      });
+
+      if (cancelled) {
+        setPracticeSession(null);
+        setPracticeComplete(false);
+      }
     } catch (err) {
       setError(err.message || "Could not cancel race.");
     } finally {
@@ -939,6 +1612,18 @@ function App() {
       ) {
         await finishChallenge(result.name);
       }
+
+      if (
+        practiceSession &&
+        !practiceSession.completed &&
+        target &&
+        result.name.toLowerCase() === target.name.toLowerCase()
+      ) {
+        setPracticeSession((current) =>
+          current ? { ...current, completed: true } : current,
+        );
+        setPracticeComplete(true);
+      }
     } catch (err) {
       setError(err.message || "Something went wrong.");
     } finally {
@@ -950,6 +1635,12 @@ function App() {
     setError("");
     setResetSuccess("");
     setPage(nextPage);
+
+    if (nextPage === "race") {
+      setRaceMode(
+        challenge ? "daily" : practiceSession ? "practice" : raceMode,
+      );
+    }
   }
 
   async function resetLocal() {
@@ -976,6 +1667,8 @@ function App() {
       setQuery("");
       setElements(STARTERS);
       setChallenge(null);
+      setPracticeSession(null);
+      setPracticeComplete(false);
       setWinner(null);
       setElapsedMs(0);
       setGraphVersion((current) => current + 1);
@@ -987,20 +1680,34 @@ function App() {
     }
   }
 
-  const pageMeta = getPageMeta(page, challenge);
+  const pageMeta = getPageMeta(page, challenge, practiceSession, practiceComplete);
 
   let pageBody;
 
   if (page === "race") {
     pageBody = (
       <RacePage
-        target={target}
+        mode={raceMode}
+        onModeChange={(nextMode) => {
+          setError("");
+          setRaceMode(nextMode);
+        }}
+        dailyTarget={dailyTarget}
         leaderboard={leaderboard}
         playerName={playerName}
         onPlayerNameChange={setPlayerName}
-        onStart={startChallenge}
-        onContinueRace={() => navigate("sandbox")}
+        onStartDaily={startChallenge}
+        onContinueDaily={() => navigate("sandbox")}
+        onContinuePractice={() => navigate("sandbox")}
         challenge={challenge}
+        practiceSession={practiceSession}
+        allCrafts={allCrafts}
+        craftsLoading={craftsLoading}
+        practiceQuery={practiceQuery}
+        onPracticeQueryChange={setPracticeQuery}
+        practiceTarget={practiceTarget}
+        onPracticeTargetChange={setPracticeTarget}
+        onStartPractice={startPractice}
         loading={busy}
         error={error}
       />
@@ -1019,42 +1726,70 @@ function App() {
   } else {
     pageBody = (
       <>
-      {(challenge || winner) && (
-      <section className="gameBar">
+      {(challenge || winner || (practiceSession && !practiceComplete)) && (
+      <section
+        className={
+          practiceSession && !challenge
+            ? "gameBar gameBarPractice"
+            : "gameBar"
+        }
+      >
         <div>
           <span className="muted">Target</span>
           <strong>{target ? `${target.emoji} ${target.name}` : "Free Craft"}</strong>
         </div>
-        <div>
-          <span className="muted">Time</span>
-          <div className="timerRow">
-            <strong>{formatDuration(elapsedMs)}</strong>
-            {challenge && !challenge.completed && (
-              <>
-                <button
-                  className="ghostButton timerButton"
-                  type="button"
-                  onClick={toggleChallengePause}
-                  disabled={busy}
-                >
-                  {isChallengePaused(challenge) ? "Resume" : "Pause"}
-                </button>
-                <button
-                  className="ghostButton timerButton cancelButton"
-                  type="button"
-                  onClick={cancelChallenge}
-                  disabled={busy}
-                >
-                  Cancel
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-        <div>
-          <span className="muted">Player</span>
-          <strong>{playerName || "Guest"}</strong>
-        </div>
+        {challenge && (
+          <>
+            <div>
+              <span className="muted">Time</span>
+              <div className="timerRow">
+                <strong>{formatDuration(elapsedMs)}</strong>
+                {!challenge.completed && (
+                  <>
+                    <button
+                      className="ghostButton timerButton"
+                      type="button"
+                      onClick={toggleChallengePause}
+                      disabled={busy}
+                    >
+                      {isChallengePaused(challenge) ? "Resume" : "Pause"}
+                    </button>
+                    <button
+                      className="ghostButton timerButton cancelButton"
+                      type="button"
+                      onClick={cancelChallenge}
+                      disabled={busy}
+                    >
+                      Cancel
+                    </button>
+                  </>
+                )}
+              </div>
+            </div>
+            <div>
+              <span className="muted">Player</span>
+              <strong>{playerName || "Guest"}</strong>
+            </div>
+          </>
+        )}
+        {practiceSession && !challenge && (
+          <>
+            <div>
+              <span className="muted">Mode</span>
+              <strong>Practice</strong>
+            </div>
+            <div className="practiceBarActions">
+              <button
+                className="ghostButton timerButton cancelButton"
+                type="button"
+                onClick={endPractice}
+                disabled={busy}
+              >
+                End Practice
+              </button>
+            </div>
+          </>
+        )}
       </section>
       )}
 
@@ -1066,6 +1801,32 @@ function App() {
           </div>
           <button className="primaryButton" onClick={() => navigate("race")}>
             View Standings
+          </button>
+        </section>
+      )}
+
+      {practiceComplete && target && (
+        <section className="winBanner">
+          <div>
+            <span className="muted">Crafted</span>
+            <strong>
+              {target.emoji} {target.name}
+            </strong>
+          </div>
+          <button
+            className="primaryButton"
+            type="button"
+            onClick={leavePracticeToRace}
+          >
+            Back To Race
+          </button>
+          <button
+            className="ghostButton"
+            type="button"
+            disabled={busy}
+            onClick={() => startPractice({ preventDefault() {} })}
+          >
+            Try Again
           </button>
         </section>
       )}

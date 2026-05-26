@@ -14,6 +14,7 @@ import {
   insertDeviceElement,
   resetDeviceData,
   getElementByName,
+  isStarterElement,
   getGlobalGraphRows,
   getChallengeTarget,
   createChallengeSession,
@@ -72,6 +73,10 @@ const startChallengeSchema = z.object({
   playerName: z.string().trim().min(1).max(24)
 });
 
+const startPracticeSchema = z.object({
+  targetName: z.string().trim().min(1).max(60)
+});
+
 const finishChallengeSchema = z.object({
   sessionId: z.string().uuid(),
   resultName: z.string().min(1).max(60)
@@ -99,6 +104,12 @@ app.get("/api/elements", (req, res) => {
 
   res.json({
     elements: allDeviceElements(deviceId)
+  });
+});
+
+app.get("/api/elements/global", (req, res) => {
+  res.json({
+    elements: allElements()
   });
 });
 
@@ -213,6 +224,46 @@ app.post("/api/challenge/start", (req, res) => {
 
     console.error(error);
     res.status(500).json({ error: "Could not start challenge." });
+  }
+});
+
+app.post("/api/practice/start", (req, res) => {
+  try {
+    const deviceId = getDeviceId(req);
+
+    if (!deviceId) {
+      return res.status(400).json({ error: "Missing or invalid device ID." });
+    }
+
+    const body = startPracticeSchema.parse(req.body);
+    const target = getElementByName(body.targetName);
+
+    if (!target) {
+      return res.status(400).json({ error: "That craft is not available yet." });
+    }
+
+    if (isStarterElement(target.name)) {
+      return res.status(400).json({
+        error: "Starter elements are already available. Pick a craft to combine toward."
+      });
+    }
+
+    resetDeviceData(deviceId);
+
+    res.json({
+      target: {
+        name: target.name,
+        emoji: target.emoji
+      },
+      elements: allDeviceElements(deviceId)
+    });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Choose a target craft." });
+    }
+
+    console.error(error);
+    res.status(500).json({ error: "Could not start practice." });
   }
 });
 

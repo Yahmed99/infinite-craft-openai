@@ -179,6 +179,87 @@ input {
   gap: 18px;
 }
 
+.raceLayoutSingle {
+  grid-template-columns: minmax(280px, 560px);
+}
+
+.raceModeToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.raceModeButton {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.raceModeButton:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.raceModeButton.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.raceModeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.practiceCraftList {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  min-height: 120px;
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.practiceCraftList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.practiceCraftList::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.practiceCraftItem {
+  justify-content: flex-start;
+}
+
+.practiceCraftItem.active {
+  border-color: #f0b429;
+  background: rgba(240, 180, 41, 0.12);
+  color: #f0b429;
+}
+
+.practiceCraftMore {
+  width: 100%;
+  margin: 0;
+}
+
+.gameBarPractice {
+  grid-template-columns: 1fr auto auto;
+}
+
+.practiceBarActions {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+}
+
 .racePanel,
 .mapPanel {
   min-height: 0;
@@ -423,6 +504,11 @@ h2 {
   box-shadow: 0 0 0 2px var(--accent-dim);
 }
 
+.search:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .elementList {
   display: flex;
   flex-wrap: wrap;
@@ -630,7 +716,128 @@ h2 {
   gap: 14px;
 }
 
+.mapSearchPanel {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.mapSearchPanel .panelHeader {
+  margin-bottom: 0;
+}
+
+.mapSearchInput {
+  margin-bottom: 0;
+}
+
+.mapSearchResults {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  min-height: 44px;
+  max-height: 132px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.mapSearchResults::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mapSearchResults::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.mapSearchItem {
+  justify-content: flex-start;
+}
+
+.mapSearchItem.active {
+  border-color: #f0b429;
+  background: rgba(240, 180, 41, 0.12);
+  color: #f0b429;
+}
+
+.mapSearchMore {
+  width: 100%;
+  margin: 0;
+}
+
+.mapSelectedCraft {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) 1fr 1fr;
+  gap: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 16px;
+}
+
+.mapSelectedSummary {
+  display: grid;
+  gap: 8px;
+}
+
+.mapSelectedHero {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.05rem;
+}
+
+.mapSelectedHero span {
+  font-size: 1.4rem;
+}
+
+.mapConnectionGroup {
+  display: grid;
+  gap: 8px;
+  min-width: 0;
+}
+
+.mapConnectionLabel {
+  font-size: 0.82rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.incoming-label {
+  color: var(--blue);
+}
+
+.outgoing-label {
+  color: var(--orange);
+}
+
+.mapConnectionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.mapConnectionChip {
+  font-size: 0.88rem;
+  padding: 8px 10px;
+}
+
+.mapConnectionEmpty {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.mapGraphColumn {
+  min-width: 0;
+  display: grid;
+  gap: 14px;
+}
+
 .map-shell {
+  position: relative;
   height: min(70vh, 720px);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -638,11 +845,19 @@ h2 {
   background: #0a0e14;
 }
 
+.mapLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 20, 0.72);
+}
+
 .map-legend {
   display: flex;
   gap: 16px;
   flex-wrap: wrap;
-  margin-top: 14px;
   font-weight: 800;
   color: var(--text-muted);
 }
@@ -679,6 +894,14 @@ h2 {
   .raceLayout,
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .mapSelectedCraft {
+    grid-template-columns: 1fr;
+  }
+
+  .mapSearchResults {
+    max-height: 160px;
   }
 
   .gameBar,
