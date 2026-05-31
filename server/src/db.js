@@ -437,6 +437,14 @@ export function getElementByName(name) {
     WHERE LOWER(name) = LOWER(?)
   `).get(name);
 }
+
+export function isStarterElement(name) {
+  return seedElements.some(
+    ([starterName]) =>
+      starterName.toLowerCase() === String(name ?? "").trim().toLowerCase(),
+  );
+}
+
 export function getGlobalGraphRows() {
   return db.prepare(`
     SELECT

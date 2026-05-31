@@ -179,19 +179,286 @@ input {
   gap: 18px;
 }
 
-.racePanel,
-.mapPanel {
+.raceLayoutSingle {
+  grid-template-columns: minmax(280px, 560px);
+}
+
+.raceModeToggle {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.raceModeButton {
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text-muted);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.raceModeButton:hover {
+  border-color: var(--border-strong);
+  color: var(--text);
+}
+
+.raceModeButton.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.raceModeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.practiceCraftList {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  min-height: 120px;
+  max-height: 240px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.practiceCraftList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.practiceCraftList::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.practiceCraftItem {
+  justify-content: flex-start;
+}
+
+.practiceCraftItem.active {
+  border-color: #f0b429;
+  background: rgba(240, 180, 41, 0.12);
+  color: #f0b429;
+}
+
+.practiceCraftMore {
+  width: 100%;
+  margin: 0;
+}
+
+.gameBarPractice {
+  grid-template-columns: 1fr auto auto;
+}
+
+.practiceBarActions {
+  display: flex;
+  align-items: end;
+  justify-content: flex-end;
+}
+
+.racePanel {
   min-height: 0;
+}
+
+.mapLayout {
+  display: grid;
+  grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  min-height: calc(100vh - 108px);
+}
+
+.mapSidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-height: 0;
+  max-height: calc(100vh - 108px);
+  overflow: auto;
+}
+
+.mapSidebarHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.mapSidebarHeader h2 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.mapSidebarHeader span {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 4px 10px;
+  color: var(--text-muted);
+  font-weight: 800;
+  font-size: 0.82rem;
+  flex-shrink: 0;
+}
+
+.mapSearchInput {
+  margin-bottom: 0;
+}
+
+.mapSearchResults {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  max-height: 140px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.mapSearchResults::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.mapSearchResults::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.mapSearchItem {
+  justify-content: flex-start;
+}
+
+.mapSearchItem.active {
+  border-color: #f0b429;
+  background: rgba(240, 180, 41, 0.12);
+  color: #f0b429;
+}
+
+.mapSearchMore {
+  width: 100%;
+  margin: 0;
+}
+
+.mapSelectedCraft {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  margin-top: 2px;
+}
+
+.mapSelectedSummary {
+  display: grid;
+  gap: 6px;
+}
+
+.mapSelectedSummary .muted {
+  margin-bottom: 0;
+}
+
+.mapSelectedHero {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.98rem;
+}
+
+.mapSelectedHero span {
+  font-size: 1.25rem;
+}
+
+.mapConnectionGroup {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mapConnectionLabel {
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.incoming-label {
+  color: var(--blue);
+}
+
+.outgoing-label {
+  color: var(--orange);
+}
+
+.mapConnectionList {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.mapConnectionChip {
+  font-size: 0.84rem;
+  padding: 7px 9px;
+}
+
+.mapConnectionEmpty {
+  margin: 0;
+  font-size: 0.84rem;
+}
+
+.mapGraphColumn {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+}
+
+.map-shell {
+  position: relative;
+  flex: 1;
+  min-height: 420px;
+  height: calc(100vh - 108px);
+  max-height: 860px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #0a0e14;
+  touch-action: none;
+  overscroll-behavior: contain;
+  box-shadow: var(--shadow);
 }
 
 .appShellCompact {
   padding-bottom: 24px;
 }
 
+.appShellMap {
+  padding-bottom: 16px;
+}
+
+.appShellMap .appHeader {
+  margin-bottom: 14px;
+  padding-bottom: 12px;
+}
+
 .pageContentCompact {
   display: flex;
   justify-content: center;
   padding-top: 8px;
+}
+
+.pageContentMap {
+  display: grid;
+  gap: 0;
 }
 
 .resetPage {
@@ -423,6 +690,11 @@ h2 {
   box-shadow: 0 0 0 2px var(--accent-dim);
 }
 
+.search:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
 .elementList {
   display: flex;
   flex-wrap: wrap;
@@ -624,27 +896,56 @@ h2 {
   font-weight: 900;
 }
 
-.mapPanel {
-  padding: 18px;
-  display: grid;
-  gap: 14px;
+.map-shell .force-graph-container,
+.map-shell canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
 }
 
-.map-shell {
-  height: min(70vh, 720px);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  overflow: hidden;
-  background: #0a0e14;
+.mapGraphControls {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 3;
+}
+
+.mapResetViewButton {
+  padding: 7px 11px;
+  font-size: 0.8rem;
+  background: rgba(20, 28, 43, 0.9);
+  border-color: var(--border-strong);
+  backdrop-filter: blur(6px);
+}
+
+.mapLoadingOverlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  background: rgba(10, 14, 20, 0.72);
 }
 
 .map-legend {
+  position: absolute;
+  left: 10px;
+  right: 120px;
+  bottom: 10px;
+  z-index: 3;
   display: flex;
-  gap: 16px;
+  gap: 12px;
   flex-wrap: wrap;
-  margin-top: 14px;
+  align-items: center;
+  padding: 7px 11px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: rgba(20, 28, 43, 0.9);
+  backdrop-filter: blur(6px);
+  font-size: 0.76rem;
   font-weight: 800;
   color: var(--text-muted);
+  pointer-events: none;
 }
 
 .dot {
@@ -667,6 +968,14 @@ h2 {
   background: var(--orange);
 }
 
+.mapLegendHint {
+  color: var(--text-subtle);
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  text-transform: none;
+  margin-left: auto;
+}
+
 @media (max-width: 820px) {
   .appHeader {
     align-items: flex-start;
@@ -679,6 +988,29 @@ h2 {
   .raceLayout,
   .grid {
     grid-template-columns: 1fr;
+  }
+
+  .mapLayout {
+    grid-template-columns: 1fr;
+    min-height: auto;
+  }
+
+  .mapSidebar {
+    max-height: none;
+  }
+
+  .map-shell {
+    height: min(58vh, 620px);
+    min-height: 360px;
+  }
+
+  .mapSearchResults {
+    max-height: 120px;
+  }
+
+  .mapLegendHint {
+    margin-left: 0;
+    width: 100%;
   }
 
   .gameBar,
