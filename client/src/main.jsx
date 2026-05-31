@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import ForceGraph2D from "react-force-graph-2d";
+import ForceGraph3D from "react-force-graph-3d";
+import * as THREE from "three";
 import "./styles.css";
 
 // Production uses same-origin /api (proxied to Render on Vercel). Dev uses local API.
@@ -129,7 +130,11 @@ function AppShell({
   children,
 }) {
   return (
-    <main className={`appShell${hideHero ? " appShellCompact" : ""}`}>
+    <main
+      className={`appShell${hideHero ? " appShellCompact" : ""}${
+        currentPage === "map" ? " appShellMap" : ""
+      }`}
+    >
       <header className="appHeader">
         <div className="brandBlock">
           <button
@@ -151,7 +156,15 @@ function AppShell({
         </section>
       )}
 
-      <div className={hideHero ? "pageContentCompact" : "pageContent"}>
+      <div
+        className={
+          hideHero
+            ? currentPage === "map"
+              ? "pageContentMap"
+              : "pageContentCompact"
+            : "pageContent"
+        }
+      >
         {children}
       </div>
     </main>
@@ -159,6 +172,210 @@ function AppShell({
 }
 
 const MAP_SEARCH_RESULT_LIMIT = 25;
+const MAP_NODE_FOCUS_DISTANCE = 46;
+const MAP_NODE_TEXTURE_SIZE = 256;
+const MAP_NODE_TEXTURE_PIXEL_RATIO = 2;
+const MAP_NODE_SCREEN_SCALE = 0.092;
+const MAP_NODE_SELECTED_SCALE = 1.22;
+const MAP_LINK_DISTANCE = 64;
+const MAP_CHARGE_STRENGTH = -95;
+const MAP_CENTER_STRENGTH = 0.13;
+const MAP_ZOOM_FIT_DURATION_MS = 900;
+const MAP_ZOOM_FIT_PADDING = 20;
+const MAP_LEGEND_PADDING = 36;
+const MAP_DEFAULT_CAMERA_DIRECTION = { x: 0.62, y: 0.16, z: 0.76 };
+
+let mapViewFitTimeoutId = null;
+
+function getGraphLookAt(fg) {
+  const bbox = fg.getGraphBbox();
+
+  return {
+    x: (bbox.x[0] + bbox.x[1]) / 2,
+    y: (bbox.y[0] + bbox.y[1]) / 2,
+    z: (bbox.z[0] + bbox.z[1]) / 2,
+  };
+}
+
+function getGraphFitPadding(shellEl) {
+  if (!shellEl) return MAP_ZOOM_FIT_PADDING + MAP_LEGEND_PADDING;
+
+  const minSide = Math.min(shellEl.clientWidth, shellEl.clientHeight);
+  const base = Math.max(14, Math.min(Math.round(minSide * 0.028), 20));
+
+  return base + MAP_LEGEND_PADDING;
+}
+
+function normalizeDirection(dir) {
+  const length = Math.hypot(dir.x, dir.y, dir.z) || 1;
+
+  return {
+    x: dir.x / length,
+    y: dir.y / length,
+    z: dir.z / length,
+  };
+}
+
+function syncOrbitTarget(fg, lookAt) {
+  const controls = fg.controls?.();
+
+  if (controls?.target) {
+    controls.target.set(lookAt.x, lookAt.y, lookAt.z);
+    controls.update?.();
+  }
+}
+
+function computeGraphFitDistance(fg, shellEl, lookAt) {
+  const bbox = fg.getGraphBbox();
+  const maxOffset = Math.max(
+    Math.abs(bbox.x[0] - lookAt.x),
+    Math.abs(bbox.x[1] - lookAt.x),
+    Math.abs(bbox.y[0] - lookAt.y),
+    Math.abs(bbox.y[1] - lookAt.y),
+    Math.abs(bbox.z[0] - lookAt.z),
+    Math.abs(bbox.z[1] - lookAt.z),
+    16,
+  );
+  const maxBoxSide = maxOffset * 2;
+  const camera = fg.camera();
+  const height = shellEl?.clientHeight || 400;
+  const padding = getGraphFitPadding(shellEl);
+  const paddedFov = Math.max(
+    12,
+    (1 - (padding * 2) / height) * (camera.fov ?? 75),
+  );
+  const fovRad = (paddedFov * Math.PI) / 180;
+  const fitHeightDistance = maxBoxSide / (2 * Math.tan(fovRad / 2));
+  const fitWidthDistance = fitHeightDistance / (camera.aspect || 1);
+
+  return Math.max(fitHeightDistance, fitWidthDistance) * 1.04;
+}
+
+function applyDefaultGraphView(fg, shellEl) {
+  if (mapViewFitTimeoutId != null) {
+    window.clearTimeout(mapViewFitTimeoutId);
+    mapViewFitTimeoutId = null;
+  }
+
+  fg.refresh?.();
+
+  const lookAt = getGraphLookAt(fg);
+  const distance = computeGraphFitDistance(fg, shellEl, lookAt);
+  const currentPos = fg.cameraPosition();
+  const fromCurrent = normalizeDirection({
+    x: (currentPos?.x ?? lookAt.x) - lookAt.x,
+    y: (currentPos?.y ?? lookAt.y) - lookAt.y,
+    z: (currentPos?.z ?? lookAt.z + 1) - lookAt.z,
+  });
+  const direction =
+    Math.hypot(fromCurrent.x, fromCurrent.y, fromCurrent.z) > 0.01
+      ? fromCurrent
+      : normalizeDirection(MAP_DEFAULT_CAMERA_DIRECTION);
+
+  syncOrbitTarget(fg, lookAt);
+
+  fg.cameraPosition(
+    {
+      x: lookAt.x + direction.x * distance,
+      y: lookAt.y + direction.y * distance,
+      z: lookAt.z + direction.z * distance,
+    },
+    lookAt,
+    MAP_ZOOM_FIT_DURATION_MS,
+  );
+
+  mapViewFitTimeoutId = window.setTimeout(() => {
+    mapViewFitTimeoutId = null;
+    syncOrbitTarget(fg, getGraphLookAt(fg));
+  }, MAP_ZOOM_FIT_DURATION_MS + 80);
+}
+
+function buildMapNodeObject(node, highlight) {
+  const nodeId = String(node.id);
+  const isSelected = highlight.selected === nodeId;
+  const isActive = !highlight.selected || highlight.activeNodes.has(nodeId);
+  const emoji = node.emoji || "✨";
+  const label = node.label || "";
+  const showLabel = isSelected && label;
+
+  const logicalWidth = MAP_NODE_TEXTURE_SIZE;
+  const logicalHeight = showLabel
+    ? Math.round(MAP_NODE_TEXTURE_SIZE * 1.22)
+    : MAP_NODE_TEXTURE_SIZE;
+  const canvas = document.createElement("canvas");
+  canvas.width = logicalWidth * MAP_NODE_TEXTURE_PIXEL_RATIO;
+  canvas.height = logicalHeight * MAP_NODE_TEXTURE_PIXEL_RATIO;
+
+  const ctx = canvas.getContext("2d");
+  ctx.scale(MAP_NODE_TEXTURE_PIXEL_RATIO, MAP_NODE_TEXTURE_PIXEL_RATIO);
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+
+  const centerX = logicalWidth / 2;
+  const centerY = showLabel ? logicalWidth * 0.42 : logicalHeight / 2;
+  const radius = isSelected ? 52 : 42;
+
+  ctx.clearRect(0, 0, logicalWidth, logicalHeight);
+  ctx.globalAlpha = isActive ? 1 : 0.12;
+
+  ctx.beginPath();
+  ctx.arc(centerX, centerY, radius, 0, 2 * Math.PI, false);
+
+  if (isSelected) {
+    ctx.fillStyle = "#f0b429";
+  } else if (highlight.activeNodes.has(nodeId)) {
+    ctx.fillStyle = "#1e2a3d";
+  } else {
+    ctx.fillStyle = "#141c2b";
+  }
+
+  ctx.fill();
+  ctx.lineWidth = isSelected ? 4 : 2;
+
+  if (isSelected) {
+    ctx.strokeStyle = "#f0b429";
+  } else if (highlight.activeNodes.has(nodeId)) {
+    ctx.strokeStyle = "#5b9cff";
+  } else {
+    ctx.strokeStyle = "#2a3548";
+  }
+
+  ctx.stroke();
+
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.font = `${isSelected ? 64 : 54}px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif`;
+  ctx.fillStyle = "#e8edf5";
+  ctx.fillText(emoji, centerX, centerY + 1);
+
+  if (showLabel) {
+    ctx.font =
+      "600 22px system-ui, -apple-system, BlinkMacSystemFont, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = "#f0b429";
+    ctx.fillText(label, centerX, centerY + radius + 10, logicalWidth - 20);
+  }
+
+  ctx.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+
+  const material = new THREE.SpriteMaterial({
+    map: texture,
+    transparent: true,
+    depthWrite: false,
+    depthTest: true,
+  });
+
+  const sprite = new THREE.Sprite(material);
+  sprite.userData.aspect = logicalHeight / logicalWidth;
+
+  return sprite;
+}
 
 function MapPage({ apiBase, graphVersion }) {
   const [graph, setGraph] = React.useState({ nodes: [], links: [] });
@@ -167,7 +384,54 @@ function MapPage({ apiBase, graphVersion }) {
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState("");
   const graphRef = React.useRef(null);
+  const mapShellRef = React.useRef(null);
   const pendingFocusId = React.useRef(null);
+  const initialFitPending = React.useRef(true);
+  const [graphDimensions, setGraphDimensions] = React.useState({
+    width: 0,
+    height: 0,
+  });
+
+  function tryInitialGraphFit() {
+    if (!initialFitPending.current || !graphRef.current || loading) return;
+
+    const shell = mapShellRef.current;
+
+    if (!shell || shell.clientWidth < 100 || shell.clientHeight < 100) return;
+
+    initialFitPending.current = false;
+
+    requestAnimationFrame(() => {
+      if (!graphRef.current) return;
+      applyDefaultGraphView(graphRef.current, shell);
+    });
+  }
+
+  React.useEffect(() => {
+    const shell = mapShellRef.current;
+
+    if (!shell) return undefined;
+
+    function preventPageScroll(event) {
+      event.preventDefault();
+    }
+
+    shell.addEventListener("wheel", preventPageScroll, { passive: false });
+
+    return () => {
+      shell.removeEventListener("wheel", preventPageScroll);
+    };
+  }, []);
+
+  React.useEffect(
+    () => () => {
+      if (mapViewFitTimeoutId != null) {
+        window.clearTimeout(mapViewFitTimeoutId);
+        mapViewFitTimeoutId = null;
+      }
+    },
+    [],
+  );
 
   React.useEffect(() => {
     let cancelled = false;
@@ -176,6 +440,7 @@ function MapPage({ apiBase, graphVersion }) {
       try {
         setLoading(true);
         pendingFocusId.current = null;
+        initialFitPending.current = true;
         setError("");
 
         const res = await fetch(`${apiBase}/api/graph/global`);
@@ -227,9 +492,12 @@ function MapPage({ apiBase, graphVersion }) {
     const link = fg.d3Force("link");
     const center = fg.d3Force("center");
 
-    if (charge) charge.strength(-360);
-    if (link) link.distance(140);
-    if (center) center.strength(0.04);
+    if (charge) charge.strength(MAP_CHARGE_STRENGTH);
+    if (link) {
+      link.distance(MAP_LINK_DISTANCE);
+      link.strength(0.95);
+    }
+    if (center) center.strength(MAP_CENTER_STRENGTH);
   }
 
   React.useEffect(() => {
@@ -376,10 +644,26 @@ function MapPage({ apiBase, graphVersion }) {
   }, [selectedNode, graph.links, graph.nodes]);
 
   function focusNode(node) {
-    if (!graphRef.current || node?.x == null || node?.y == null) return;
+    if (!graphRef.current || node?.x == null) return;
 
-    graphRef.current.centerAt(node.x, node.y, 600);
-    graphRef.current.zoom(2.2, 600);
+    const nx = node.x ?? 0;
+    const ny = node.y ?? 0;
+    const nz = node.z ?? 0;
+    const lookAt = { x: nx, y: ny, z: nz };
+    const distRatio =
+      1 + MAP_NODE_FOCUS_DISTANCE / Math.hypot(nx, ny, nz || 1);
+    const hasPosition =
+      node.x != null && node.y != null && node.z != null;
+
+    syncOrbitTarget(graphRef.current, lookAt);
+
+    graphRef.current.cameraPosition(
+      hasPosition
+        ? { x: nx * distRatio, y: ny * distRatio, z: nz * distRatio }
+        : { x: 0, y: 0, z: MAP_NODE_FOCUS_DISTANCE },
+      lookAt,
+      600,
+    );
   }
 
   function selectNode(node) {
@@ -387,7 +671,7 @@ function MapPage({ apiBase, graphVersion }) {
     pendingFocusId.current = getNodeId(node);
     focusNode(node);
 
-    if (node?.x != null && node?.y != null) {
+    if (node?.x != null && node?.y != null && node?.z != null) {
       pendingFocusId.current = null;
     }
   }
@@ -395,23 +679,93 @@ function MapPage({ apiBase, graphVersion }) {
   function handleEngineStop() {
     configureForces();
 
-    if (!pendingFocusId.current) return;
+    if (pendingFocusId.current) {
+      const node = graph.nodes.find(
+        (item) => getNodeId(item) === pendingFocusId.current,
+      );
 
-    const node = graph.nodes.find(
-      (item) => getNodeId(item) === pendingFocusId.current,
-    );
+      if (!node) {
+        pendingFocusId.current = null;
+        return;
+      }
 
-    if (!node) {
-      pendingFocusId.current = null;
+      focusNode(node);
+
+      if (node.x != null && node.y != null && node.z != null) {
+        pendingFocusId.current = null;
+      }
+
       return;
     }
 
-    focusNode(node);
-
-    if (node.x != null && node.y != null) {
-      pendingFocusId.current = null;
+    if (initialFitPending.current) {
+      tryInitialGraphFit();
     }
   }
+
+  function resetGraphView() {
+    if (!graphRef.current || loading || graph.nodes.length === 0) return;
+
+    pendingFocusId.current = null;
+    applyDefaultGraphView(graphRef.current, mapShellRef.current);
+  }
+
+  const nodeThreeObject = useCallback(
+    (node) => buildMapNodeObject(node, highlight),
+    [highlight],
+  );
+
+  const nodePositionUpdate = useCallback(
+    (obj, coords, node) => {
+      obj.position.set(coords.x, coords.y, coords.z ?? 0);
+
+      const camera = graphRef.current?.camera();
+
+      if (!camera) return true;
+
+      const nodeId = String(node.id);
+      const isSelected = highlight.selected === nodeId;
+      const distance = camera.position.distanceTo(obj.position);
+      const sizeMultiplier = isSelected ? MAP_NODE_SELECTED_SCALE : 1;
+      const worldScale = distance * MAP_NODE_SCREEN_SCALE * sizeMultiplier;
+      const aspect = obj.userData?.aspect ?? 1;
+
+      obj.scale.set(worldScale, worldScale * aspect, 1);
+
+      return true;
+    },
+    [highlight],
+  );
+
+  React.useEffect(() => {
+    graphRef.current?.refresh();
+  }, [highlight, nodeThreeObject]);
+
+  React.useEffect(() => {
+    const shell = mapShellRef.current;
+
+    if (!shell) return undefined;
+
+    function updateGraphDimensions() {
+      setGraphDimensions({
+        width: shell.clientWidth,
+        height: shell.clientHeight,
+      });
+
+      if (graphRef.current) {
+        graphRef.current.refresh();
+      }
+
+      tryInitialGraphFit();
+    }
+
+    updateGraphDimensions();
+
+    const observer = new ResizeObserver(updateGraphDimensions);
+    observer.observe(shell);
+
+    return () => observer.disconnect();
+  }, [loading, graph.nodes.length]);
 
   function handleSearchKeyDown(event) {
     if (event.key !== "Enter" || filteredNodes.length === 0) return;
@@ -424,10 +778,10 @@ function MapPage({ apiBase, graphVersion }) {
     <>
       {error && <div className="error">{error}</div>}
 
-      <section className="panel mapPanel">
-        <div className="mapSearchPanel">
-          <div className="panelHeader">
-            <h2>Search Crafts</h2>
+      <section className="mapLayout">
+        <aside className="mapSidebar">
+          <div className="mapSidebarHeader">
+            <h2>Craft Graph</h2>
             <span>{loading ? "…" : graph.nodes.length}</span>
           </div>
 
@@ -440,45 +794,43 @@ function MapPage({ apiBase, graphVersion }) {
             onKeyDown={handleSearchKeyDown}
           />
 
-          <div className="mapSearchResults">
-            {loading && <p className="empty">Loading Craft Graph…</p>}
+          {(loading || query.trim()) && (
+            <div className="mapSearchResults">
+              {loading && <p className="empty">Loading Craft Graph…</p>}
 
-            {!loading && !query.trim() && (
-              <p className="empty">Type To Search Crafts In The Graph.</p>
-            )}
+              {!loading && query.trim() && filteredNodes.length === 0 && (
+                <p className="empty">No Crafts Match That Search.</p>
+              )}
 
-            {!loading && query.trim() && filteredNodes.length === 0 && (
-              <p className="empty">No Crafts Match That Search.</p>
-            )}
+              {!loading &&
+                visibleSearchResults.map((node) => {
+                  const isSelected =
+                    selectedNode && getNodeId(selectedNode) === getNodeId(node);
 
-            {!loading &&
-              visibleSearchResults.map((node) => {
-                const isSelected =
-                  selectedNode && getNodeId(selectedNode) === getNodeId(node);
+                  return (
+                    <button
+                      key={getNodeId(node)}
+                      type="button"
+                      className={
+                        isSelected
+                          ? "elementButton mapSearchItem active"
+                          : "elementButton mapSearchItem"
+                      }
+                      onClick={() => selectNode(node)}
+                    >
+                      <span>{node.emoji || "✨"}</span>
+                      {node.label}
+                    </button>
+                  );
+                })}
 
-                return (
-                  <button
-                    key={getNodeId(node)}
-                    type="button"
-                    className={
-                      isSelected
-                        ? "elementButton mapSearchItem active"
-                        : "elementButton mapSearchItem"
-                    }
-                    onClick={() => selectNode(node)}
-                  >
-                    <span>{node.emoji || "✨"}</span>
-                    {node.label}
-                  </button>
-                );
-              })}
-
-            {!loading && hiddenSearchCount > 0 && (
-              <p className="empty mapSearchMore">
-                +{hiddenSearchCount} More — Refine Your Search.
-              </p>
-            )}
-          </div>
+              {!loading && hiddenSearchCount > 0 && (
+                <p className="empty mapSearchMore">
+                  +{hiddenSearchCount} More — Refine Your Search.
+                </p>
+              )}
+            </div>
+          )}
 
           {selectedNode && (
             <div className="mapSelectedCraft">
@@ -537,168 +889,113 @@ function MapPage({ apiBase, graphVersion }) {
               </div>
             </div>
           )}
-        </div>
+        </aside>
 
         <div className="mapGraphColumn">
-          <div className="map-shell">
+          <div className="map-shell" ref={mapShellRef}>
+            <div className="mapGraphControls">
+              <button
+                type="button"
+                className="ghostButton mapResetViewButton"
+                onClick={resetGraphView}
+                disabled={loading || graph.nodes.length === 0}
+              >
+                Reset View
+              </button>
+            </div>
             {loading && (
               <div className="mapLoadingOverlay">
                 <div className="loader">Loading Graph…</div>
               </div>
             )}
-        <ForceGraph2D
-          ref={graphRef}
-          graphData={graph}
-          nodeId="id"
-          nodeLabel={(node) => `${node.emoji || "✨"} ${node.label}`}
-          linkDirectionalArrowLength={4}
-          linkDirectionalArrowRelPos={1}
-          d3VelocityDecay={0.32}
-          d3AlphaDecay={0.016}
-          warmupTicks={180}
-          cooldownTicks={320}
-          onEngineTick={configureForces}
-          onEngineStop={handleEngineStop}
-          onNodeClick={(node) => selectNode(node)}
-          onBackgroundClick={() => {
-            pendingFocusId.current = null;
-            setSelectedNode(null);
-          }}
-          nodePointerAreaPaint={(node, color, ctx) => {
-            ctx.fillStyle = color;
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, 28, 0, 2 * Math.PI, false);
-            ctx.fill();
-          }}
-          nodeCanvasObject={(node, ctx, globalScale) => {
-            const nodeId = getNodeId(node);
-            const isSelected = highlight.selected === nodeId;
-            const isActive =
-              !highlight.selected || highlight.activeNodes.has(nodeId);
+            <ForceGraph3D
+              ref={graphRef}
+              width={graphDimensions.width || undefined}
+              height={graphDimensions.height || undefined}
+              graphData={graph}
+              backgroundColor="#0a0e14"
+              controlType="orbit"
+              showNavInfo={false}
+              enableNodeDrag={false}
+              enableNavigationControls
+              nodeId="id"
+              nodeLabel={(node) => `${node.emoji || "✨"} ${node.label}`}
+              nodeThreeObject={nodeThreeObject}
+              nodeThreeObjectExtend={false}
+              nodePositionUpdate={nodePositionUpdate}
+              linkDirectionalArrowLength={2.8}
+              linkDirectionalArrowRelPos={1}
+              d3VelocityDecay={0.32}
+              d3AlphaDecay={0.016}
+              warmupTicks={180}
+              cooldownTicks={320}
+              onEngineStop={handleEngineStop}
+              onNodeClick={(node) => selectNode(node)}
+              onBackgroundClick={() => {
+                pendingFocusId.current = null;
+                setSelectedNode(null);
+              }}
+              linkColor={(link) => {
+                const id = getLinkId(link);
 
-            const emoji = node.emoji || "✨";
-            const label = node.label || "";
-
-            const emojiSize = isSelected
-              ? Math.max(18, 30 / globalScale)
-              : Math.max(15, 24 / globalScale);
-
-            const labelSize = Math.max(8, 12 / globalScale);
-            const radius = isSelected ? 18 : 14;
-
-            ctx.globalAlpha = isActive ? 1 : 0.12;
-
-            ctx.beginPath();
-            ctx.arc(node.x, node.y, radius, 0, 2 * Math.PI, false);
-
-            if (isSelected) {
-              ctx.fillStyle = "#f0b429";
-            } else if (highlight.activeNodes.has(nodeId)) {
-              ctx.fillStyle = "#1e2a3d";
-            } else {
-              ctx.fillStyle = "#141c2b";
-            }
-
-            ctx.fill();
-
-            ctx.lineWidth = isSelected ? 2.5 : 1.25;
-
-            if (isSelected) {
-              ctx.strokeStyle = "#f0b429";
-            } else if (highlight.activeNodes.has(nodeId)) {
-              ctx.strokeStyle = "#5b9cff";
-            } else {
-              ctx.strokeStyle = "#2a3548";
-            }
-
-            ctx.stroke();
-
-            ctx.textAlign = "center";
-            ctx.textBaseline = "middle";
-
-            ctx.font = `${emojiSize}px system-ui, Apple Color Emoji, Segoe UI Emoji, Noto Color Emoji, sans-serif`;
-            ctx.fillStyle = "#e8edf5";
-            ctx.fillText(emoji, node.x, node.y);
-
-            if (globalScale > 0.45 || isSelected) {
-              ctx.font = `600 ${labelSize}px system-ui, -apple-system, BlinkMacSystemFont, sans-serif`;
-              ctx.textBaseline = "top";
-              ctx.fillStyle = isSelected ? "#f0b429" : "#8b96a8";
-
-              const maxWidth = 100 / globalScale;
-              const words = label.split(" ");
-              const lines = [];
-              let line = "";
-
-              for (const word of words) {
-                const testLine = line ? `${line} ${word}` : word;
-                const width = ctx.measureText(testLine).width;
-
-                if (width > maxWidth && line) {
-                  lines.push(line);
-                  line = word;
-                } else {
-                  line = testLine;
+                if (!highlight.selected) return "rgba(91, 156, 255, 0.28)";
+                if (highlight.incoming.has(id)) {
+                  return "rgba(91, 156, 255, 0.95)";
                 }
-              }
+                if (highlight.outgoing.has(id)) {
+                  return "rgba(255, 155, 84, 0.95)";
+                }
 
-              if (line) lines.push(line);
+                return "rgba(42, 53, 72, 0.35)";
+              }}
+              linkOpacity={(link) => {
+                const id = getLinkId(link);
 
-              lines.slice(0, 2).forEach((text, index) => {
-                ctx.fillText(
-                  text,
-                  node.x,
-                  node.y + radius + 4 + index * (labelSize + 2),
-                );
-              });
-            }
+                if (!highlight.selected) return 0.55;
+                if (highlight.incoming.has(id) || highlight.outgoing.has(id)) {
+                  return 0.95;
+                }
 
-            ctx.globalAlpha = 1;
-          }}
-          linkColor={(link) => {
-            const id = getLinkId(link);
+                return 0.12;
+              }}
+              linkWidth={(link) => {
+                const id = getLinkId(link);
 
-            if (!highlight.selected) return "rgba(91, 156, 255, 0.28)";
-            if (highlight.incoming.has(id)) return "rgba(91, 156, 255, 0.95)";
-            if (highlight.outgoing.has(id)) return "rgba(255, 155, 84, 0.95)";
+                if (!highlight.selected) return 0.6;
+                if (highlight.incoming.has(id) || highlight.outgoing.has(id)) {
+                  return 1.8;
+                }
 
-            return "rgba(42, 53, 72, 0.35)";
-          }}
-          linkWidth={(link) => {
-            const id = getLinkId(link);
+                return 0.15;
+              }}
+              linkDirectionalParticles={(link) => {
+                const id = getLinkId(link);
 
-            if (!highlight.selected) return 1;
-            if (highlight.incoming.has(id) || highlight.outgoing.has(id)) {
-              return 2.5;
-            }
+                if (highlight.incoming.has(id) || highlight.outgoing.has(id)) {
+                  return 2;
+                }
 
-            return 0.5;
-          }}
-          linkDirectionalParticles={(link) => {
-            const id = getLinkId(link);
+                return 0;
+              }}
+              linkDirectionalParticleWidth={1.6}
+              linkDirectionalParticleSpeed={0.006}
+            />
 
-            if (highlight.incoming.has(id) || highlight.outgoing.has(id)) {
-              return 2;
-            }
-
-            return 0;
-          }}
-          linkDirectionalParticleWidth={2}
-          linkDirectionalParticleSpeed={0.006}
-        />
-      </div>
-
-      <div className="map-legend">
-        <span>
-          <b className="dot selected-dot" /> Selected
-        </span>
-        <span>
-          <b className="dot incoming-dot" /> Incoming
-        </span>
-        <span>
-          <b className="dot outgoing-dot" /> Outgoing
-        </span>
-        </div>
+            <div className="map-legend">
+              <span>
+                <b className="dot selected-dot" /> Selected
+              </span>
+              <span>
+                <b className="dot incoming-dot" /> Incoming
+              </span>
+              <span>
+                <b className="dot outgoing-dot" /> Outgoing
+              </span>
+              <span className="mapLegendHint">
+                Scroll To Zoom • Drag To Rotate
+              </span>
+            </div>
+          </div>
         </div>
       </section>
     </>
@@ -1934,7 +2231,7 @@ function App() {
       eyebrow={pageMeta.eyebrow}
       title={pageMeta.title}
       subtitle={pageMeta.subtitle}
-      hideHero={page === "reset"}
+      hideHero={page === "reset" || page === "map"}
     >
       {pageBody}
     </AppShell>
