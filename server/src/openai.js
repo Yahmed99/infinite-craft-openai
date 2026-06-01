@@ -17,6 +17,19 @@ export async function createEmbedding(input) {
   return response.data[0].embedding;
 }
 
+export async function createEmbeddings(inputs) {
+  if (!inputs.length) return [];
+
+  const response = await openai.embeddings.create({
+    model: "text-embedding-3-small",
+    input: inputs
+  });
+
+  return [...response.data]
+    .sort((a, b) => a.index - b.index)
+    .map((item) => item.embedding);
+}
+
 export async function generateCombination({ a, b, neighbors }) {
   const neighborText = neighbors.length
     ? neighbors

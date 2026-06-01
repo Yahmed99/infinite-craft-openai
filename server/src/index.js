@@ -5,7 +5,7 @@ import { randomUUID } from "crypto";
 import { z } from "zod";
 import {
   allElements,
-  allRecipesWithEmbeddings,
+  allRecipesForSimilarity,
   allDeviceElements,
   getRecipe,
   insertRecipe,
@@ -24,10 +24,11 @@ import {
   cancelChallengeSession,
   finishChallengeSession,
   getChallengeLeaderboard,
-  getChallengeScoreStanding
+  getChallengeScoreStanding,
+  updateRecipePairEmbedding
 } from "./db.js";
 
-import { createEmbedding, generateCombination } from "./openai.js";
+import { createEmbedding, createEmbeddings, generateCombination } from "./openai.js";
 import { topSimilarRecipes } from "./similarity.js";
 import { normalizeElementName, pairKey } from "./utils.js";
 
@@ -74,6 +75,34 @@ const insightSchema = z.object({
   a: z.string().min(1).max(60),
   b: z.string().min(1).max(60)
 });
+
+function hasUsableEmbedding(recipe) {
+  try {
+    const embedding = JSON.parse(recipe.pairEmbeddingJson || "[]");
+    return Array.isArray(embedding) && embedding.length > 0;
+  } catch {
+    return false;
+  }
+}
+
+async function recipesReadyForSimilarity() {
+  const recipes = allRecipesForSimilarity();
+  const missing = recipes.filter((recipe) => !hasUsableEmbedding(recipe));
+
+  if (!missing.length) return recipes;
+
+  const embeddings = await createEmbeddings(
+    missing.map((recipe) => `${recipe.a} + ${recipe.b}`),
+  );
+
+  missing.forEach((recipe, index) => {
+    const embedding = embeddings[index] || [];
+    updateRecipePairEmbedding(recipe.id, embedding);
+    recipe.pairEmbeddingJson = JSON.stringify(embedding);
+  });
+
+  return recipes;
+}
 
 const startChallengeSchema = z.object({
   playerName: z.string().trim().min(1).max(24)
@@ -192,7 +221,7 @@ app.post("/api/insights/similarity", async (req, res) => {
 
     const pairText = `${elementA.name} + ${elementB.name}`;
     const pairEmbedding = await createEmbedding(pairText);
-    const recipes = allRecipesWithEmbeddings();
+    const recipes = await recipesReadyForSimilarity();
     const neighbors = topSimilarRecipes(pairEmbedding, recipes, 8).map(
       (recipe, index) => {
         let embedding = [];
@@ -528,7 +557,7 @@ app.post("/api/combine", async (req, res) => {
 
     // Generate new recipe
     const pairEmbedding = await createEmbedding(`${a} + ${b}`);
-    const recipes = allRecipesWithEmbeddings();
+    const recipes = await recipesReadyForSimilarity();
     const neighbors = topSimilarRecipes(pairEmbedding, recipes, 8);
 
     const result = await generateCombination({ a, b, neighbors });

@@ -427,6 +427,28 @@ export function allRecipesWithEmbeddings() {
   `).all();
 }
 
+export function allRecipesForSimilarity() {
+  return db.prepare(`
+    SELECT
+      id,
+      pair_key AS pairKey,
+      a,
+      b,
+      result_name AS resultName,
+      result_emoji AS resultEmoji,
+      pair_embedding_json AS pairEmbeddingJson
+    FROM recipes
+  `).all();
+}
+
+export function updateRecipePairEmbedding(id, pairEmbedding) {
+  return db.prepare(`
+    UPDATE recipes
+    SET pair_embedding_json = ?
+    WHERE id = ?
+  `).run(JSON.stringify(pairEmbedding ?? []), id);
+}
+
 export function resetDeviceData(deviceId) {
   const deleteElements = db.prepare(`
     DELETE FROM device_elements
