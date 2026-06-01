@@ -1,6 +1,6 @@
 # NYCrafts
 
-A NYC-themed game where players combine crafts to unlock iconic landmarks, foods, neighborhoods, slang, and other famous cultural references to celebrate New York City!
+A NYC-themed crafting game where players combine concepts to unlock iconic landmarks, foods, neighborhoods, sports teams, slang, famous New Yorkers, and cultural references inspired by New York City.
 
 [Visit the deployed app!](https://nycrafts.vercel.app)
 
@@ -11,60 +11,54 @@ A NYC-themed game where players combine crafts to unlock iconic landmarks, foods
 **Combine NYC Concepts**
 
 * Discover new items by combining two existing concepts
-* Progress from simple starter nodes to iconic NYC discoveries
-* Explore hundreds of handcrafted relationships inspired by New York City culture
+* Progress from starter elements to iconic NYC discoveries
+* Unlock handcrafted NYC-themed recipes and AI-generated combinations
 
 **Examples**
 
-* Pizza + Fold → New York Slice
-* Bronx + Baseball → Yankees
-* Subway + Card → MetroCard
+* Food + Money → Dollar Slice
+* MetroCard + Subway Station → MTA
+* Hip Hop + Brooklyn → Jay-Z
 
-### Multiple Game Modes
+### Game Modes
 
-#### Race Mode
+#### Daily Challenge
 
-* Compete to discover a randomly selected NYC target item
-* Track crafting progress and discovery chains
-* Challenge friends to find the fastest path
+* Race to craft the daily target item
+* Compare fastest runs on the leaderboard
+* Restart or continue active challenge sessions
 
 #### Practice Mode
 
-* Learn crafting mechanics without competitive pressure
-* Experiment with combinations
-* Explore the knowledge graph freely
+* Choose a specific craft as your target
+* Practice finding a path without daily challenge pressure
+* Search available crafts and work toward your selected goal
 
 #### Sandbox Mode
 
-* Unlimited exploration
-* Access the complete crafting system
-* Discover hidden recipes and rare combinations
+* Freely combine elements
+* Experiment with known and generated recipes
+* Discover new NYC-themed crafts at your own pace
 
-### Interactive 3D Craft Map
+### Interactive Crafting Map
 
-**Knowledge Graph Visualization**
+**3D Craft Graph**
 
-* Explore the entire crafting universe in 3D
-* Visualize relationships between crafts
-* Identify crafting paths and discovery chains
-
-**Graph Features**
-
-* Zoom, rotate, and navigate freely
-* Visualize parent-child relationships
-* Track progression through the graph
+* Explore the full global recipe graph
+* Search for specific crafts
+* View parent and child craft relationships
 
 ### Progress Tracking
 
 * Crafted item collection
-* Reset progress functionality
-* Daily challenges and competitive gameplay
+* Reset progress option
+* Persistent challenge sessions
 
 ## Installation
 
 ### Prerequisites
 
-* Node.js 18+
+* Node.js
 * npm
 * OpenAI API Key
 
@@ -77,31 +71,26 @@ git clone https://github.com/Yahmed99/NYCrafts.git
 cd NYCrafts
 ```
 
-2. Install dependencies
+2. Install all dependencies
 
 ```bash
-npm install
+npm run install:all
 ```
 
-3. Create environment file
+3. Create a `.env` file inside the `server/` folder
 
-```bash
+```env
 OPENAI_API_KEY=your_api_key_here
+PORT=8787
 ```
 
-4. Start the backend
+4. Start both frontend and backend
 
 ```bash
-npm run server
+npm run dev
 ```
 
-5. Start the frontend
-
-```bash
-npm run client
-```
-
-6. Open
+5. Open the app
 
 ```text
 http://localhost:5173
@@ -113,23 +102,50 @@ http://localhost:5173
 .
 ├── client/
 │   ├── src/
-│   │   ├── components/
-│   │   ├── pages/
-│   │   ├── graph/
-│   │   ├── game/
-│   │   └── assets/
+│   │   ├── main.jsx
+│   │   └── styles.css
+│   ├── index.html
+│   ├── package.json
+│   ├── vercel.json
+│   └── vite.config.js
 │
 ├── server/
-│   ├── routes/
-│   ├── database/
-│   ├── embeddings/
-│   └── api/
+│   ├── src/
+│   │   ├── db.js
+│   │   ├── index.js
+│   │   ├── openai.js
+│   │   ├── similarity.js
+│   │   └── utils.js
+│   ├── .env.example
+│   └── package.json
 │
-├── recipes.db
 ├── package.json
-├── README.md
-└── vite.config.js
+├── package-lock.json
+└── README.md
 ```
+
+## API Endpoints
+
+### Core
+
+* `GET /api/health` — Check backend status
+* `GET /api/elements` — Get device-specific discovered elements
+* `GET /api/elements/global` — Get all global elements
+* `POST /api/combine` — Combine two crafts
+* `POST /api/reset` — Reset device progress
+
+### Challenge & Practice
+
+* `GET /api/challenge` — Get daily challenge target and leaderboard
+* `POST /api/challenge/start` — Start a daily challenge
+* `POST /api/challenge/pause` — Pause or resume a challenge
+* `POST /api/challenge/cancel` — Cancel a challenge
+* `POST /api/challenge/finish` — Submit a completed challenge
+* `POST /api/practice/start` — Start practice mode with a selected target
+
+### Graph
+
+* `GET /api/graph/global` — Load the full recipe graph
 
 ## Technical Stack
 
@@ -152,13 +168,15 @@ http://localhost:5173
 ### AI
 
 * OpenAI Embeddings
+* GPT-powered craft generation
+* Semantic similarity matching
 
 ### Visualization
 
-* React Force Graph 3D
-* Three.js
+* React Force Graph
+* Three.js 3D graph rendering
 
 ### Deployment
 
-* Vercel
-* Render
+* Vercel Frontend
+* Render Backend
