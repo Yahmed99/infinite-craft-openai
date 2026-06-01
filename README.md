@@ -1,48 +1,177 @@
-# Infinite Craft-style app with OpenAI embeddings
+# NYCrafts
 
-A small full-stack starter inspired by Neal Agarwal's Infinite Craft mechanic:
-combine two elements, cache the result, and use OpenAI + embeddings to make new combinations feel consistent.
+A NYC-themed game where players combine crafts to unlock iconic landmarks, foods, neighborhoods, slang, and other famous cultural references to celebrate New York City!
 
-## Stack
+[Visit the deployed app!](https://nycrafts.vercel.app)
 
-- React + Vite frontend
-- Express backend
-- SQLite local database
-- OpenAI embeddings for similarity memory
-- OpenAI chat completion for generating new item results
+## Features
 
-## Setup
+### Crafting System
+
+**Combine NYC Concepts**
+
+* Discover new items by combining two existing concepts
+* Progress from simple starter nodes to iconic NYC discoveries
+* Explore hundreds of handcrafted relationships inspired by New York City culture
+
+**Examples**
+
+* Pizza + Fold → New York Slice
+* Bronx + Baseball → Yankees
+* Subway + Card → MetroCard
+
+---
+
+### Multiple Game Modes
+
+#### Race Mode
+
+* Compete to discover a randomly selected NYC target item
+* Track crafting progress and discovery chains
+* Challenge friends to find the fastest path
+
+#### Practice Mode
+
+* Learn crafting mechanics without competitive pressure
+* Experiment with combinations
+* Explore the knowledge graph freely
+
+#### Sandbox Mode
+
+* Unlimited exploration
+* Access the complete crafting system
+* Discover hidden recipes and rare combinations
+
+---
+
+### Interactive 3D Craft Map
+
+**Knowledge Graph Visualization**
+
+* Explore the entire crafting universe in 3D
+* Visualize relationships between crafts
+* Identify crafting paths and discovery chains
+
+**Graph Features**
+
+* Zoom, rotate, and navigate freely
+* Visualize parent-child relationships
+* Track progression through the graph
+
+---
+
+### Progress Tracking
+
+* Crafted item collection
+* Reset progress functionality
+* Daily challenges and competitive gameplay
+
+---
+
+
+## Installation
+
+### Prerequisites
+
+* Node.js 18+
+* npm
+* OpenAI API Key
+
+### Setup
+
+1. Clone the repository
 
 ```bash
-cd infinite-craft-openai
-npm run install:all
-cp server/.env.example server/.env
+git clone https://github.com/Yahmed99/NYCrafts.git
+cd NYCrafts
 ```
 
-Edit `server/.env`:
+2. Install dependencies
 
 ```bash
-OPENAI_API_KEY=your_key_here
-PORT=8787
+npm install
 ```
 
-Run:
+3. Create environment file
 
 ```bash
-npm run dev
+OPENAI_API_KEY=your_api_key_here
 ```
 
-Open:
+4. Start the backend
+
+```bash
+npm run server
+```
+
+5. Start the frontend
+
+```bash
+npm run client
+```
+
+6. Open
 
 ```text
 http://localhost:5173
 ```
 
-## How it works
+---
 
-1. The frontend sends `{ a, b }` to `/api/combine`.
-2. The backend sorts and normalizes the pair into a stable key.
-3. If the recipe already exists, it returns the cached result.
-4. If not, it embeds the pair text and retrieves similar past recipes.
-5. It asks the model for one concise, intuitive result.
-6. It saves the recipe and the new element.
+## Project Structure
+
+```text
+.
+├── client/
+│   ├── src/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── graph/
+│   │   ├── game/
+│   │   └── assets/
+│
+├── server/
+│   ├── routes/
+│   ├── database/
+│   ├── embeddings/
+│   └── api/
+│
+├── recipes.db
+├── package.json
+├── README.md
+└── vite.config.js
+```
+
+---
+
+## Technical Stack
+
+### Frontend
+
+* React
+* Vite
+* JavaScript
+* CSS
+
+### Backend
+
+* Node.js
+* Express
+
+### Database
+
+* SQLite
+
+### AI
+
+* OpenAI Embeddings
+
+### Visualization
+
+* React Force Graph 3D
+* Three.js
+
+### Deployment
+
+* Vercel
+* Render
