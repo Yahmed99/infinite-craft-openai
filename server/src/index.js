@@ -23,7 +23,8 @@ import {
   setChallengePause,
   cancelChallengeSession,
   finishChallengeSession,
-  getChallengeLeaderboard
+  getChallengeLeaderboard,
+  getChallengeScoreStanding
 } from "./db.js";
 
 import { createEmbedding, generateCombination } from "./openai.js";
@@ -67,6 +68,11 @@ function getDeviceId(req) {
 const combineSchema = z.object({
   a: z.string().min(1).max(40),
   b: z.string().min(1).max(40)
+});
+
+const insightSchema = z.object({
+  a: z.string().min(1).max(60),
+  b: z.string().min(1).max(60)
 });
 
 const startChallengeSchema = z.object({
@@ -168,6 +174,80 @@ app.get("/api/graph/global", (req, res) => {
   } catch (err) {
     console.error("Graph endpoint error:", err);
     res.status(500).json({ error: "Failed to load global graph" });
+  }
+});
+
+app.post("/api/insights/similarity", async (req, res) => {
+  try {
+    const body = insightSchema.parse(req.body);
+    const a = normalizeElementName(body.a);
+    const b = normalizeElementName(body.b);
+
+    if (!a || !b) {
+      return res.status(400).json({ error: "Choose two global words." });
+    }
+
+    const elementA = getElementByName(a) || { name: a, emoji: "âœ¨" };
+    const elementB = getElementByName(b) || { name: b, emoji: "âœ¨" };
+
+    const pairText = `${elementA.name} + ${elementB.name}`;
+    const pairEmbedding = await createEmbedding(pairText);
+    const recipes = allRecipesWithEmbeddings();
+    const neighbors = topSimilarRecipes(pairEmbedding, recipes, 8).map(
+      (recipe, index) => {
+        let embedding = [];
+
+        try {
+          embedding = JSON.parse(recipe.pairEmbeddingJson || "[]");
+        } catch {
+          embedding = [];
+        }
+
+        return {
+          id: recipe.pairKey || `${recipe.a}+${recipe.b}`,
+          rank: index + 1,
+          a: recipe.a,
+          b: recipe.b,
+          resultName: recipe.resultName,
+          resultEmoji: recipe.resultEmoji,
+          score: recipe.score,
+          vectorPreview: embedding.slice(0, 12)
+        };
+      },
+    );
+
+    res.json({
+      pair: {
+        a: elementA,
+        b: elementB,
+        text: pairText
+      },
+      embedding: {
+        model: "text-embedding-3-small",
+        dimensions: pairEmbedding.length,
+        preview: pairEmbedding.slice(0, 12)
+      },
+      neighbors,
+      generationPayload: {
+        model: "gpt-4.1-mini",
+        neighborCount: neighbors.length,
+        similarRecipes: neighbors.map((neighbor) => ({
+          a: neighbor.a,
+          b: neighbor.b,
+          resultName: neighbor.resultName
+        }))
+      }
+    });
+  } catch (error) {
+    console.error("Similarity insight endpoint error:", error);
+
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Choose two global words." });
+    }
+
+    res.status(500).json({
+      error: "Could not inspect similarity vectors."
+    });
   }
 });
 
@@ -375,9 +455,11 @@ app.post("/api/challenge/finish", (req, res) => {
       completedAtMs,
       durationMs
     });
+    const standing = getChallengeScoreStanding(session.id);
 
     res.json({
       session: finished,
+      standing,
       leaderboard: getChallengeLeaderboard(session.targetName)
     });
   } catch (error) {

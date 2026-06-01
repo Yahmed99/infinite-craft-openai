@@ -106,6 +106,7 @@ const PAGES = {
   race: { id: "race", label: "Race" },
   sandbox: { id: "sandbox", label: "Sandbox" },
   map: { id: "map", label: "Map" },
+  insights: { id: "insights", label: "How It Works" },
   reset: { id: "reset", label: "Reset" },
 };
 
@@ -1028,11 +1029,61 @@ function Leaderboard({ scores = [] }) {
   );
 }
 
+function RaceResultCard({ winner, dailyTarget, leaderboard }) {
+  if (!winner) return null;
+
+  const standing = winner.standing?.standing;
+  const totalRuns = winner.standing?.totalRuns;
+  const bestTime = leaderboard[0]?.durationMs;
+  const gapToBest =
+    Number.isFinite(bestTime) && Number.isFinite(winner.durationMs)
+      ? Math.max(0, winner.durationMs - bestTime)
+      : null;
+
+  return (
+    <article className="raceResultCard">
+      <div className="raceResultHeader">
+        <div>
+          <span className="muted">Completed Run</span>
+          <strong>{winner.playerName || "Guest"}</strong>
+        </div>
+        <span className="raceResultRank">
+          {standing ? `#${standing}` : "Rank Pending"}
+        </span>
+      </div>
+
+      <div className="raceResultStats">
+        <div>
+          <span>Time</span>
+          <strong>{formatDuration(winner.durationMs)}</strong>
+        </div>
+        <div>
+          <span>Standing</span>
+          <strong>
+            {standing && totalRuns ? `${standing} Of ${totalRuns}` : "Pending"}
+          </strong>
+        </div>
+        <div>
+          <span>Target</span>
+          <strong>
+            {dailyTarget?.emoji || ""} {winner.targetName || dailyTarget?.name}
+          </strong>
+        </div>
+        <div>
+          <span>Behind Best</span>
+          <strong>{gapToBest === null ? "Pending" : formatDuration(gapToBest)}</strong>
+        </div>
+      </div>
+    </article>
+  );
+}
+
 function RacePage({
   mode,
   onModeChange,
   dailyTarget,
   leaderboard,
+  winner,
   playerName,
   onPlayerNameChange,
   onStartDaily,
@@ -1204,6 +1255,12 @@ function RacePage({
             </section>
 
             <section className="panel racePanel">
+              <RaceResultCard
+                winner={winner}
+                dailyTarget={dailyTarget}
+                leaderboard={leaderboard}
+              />
+
               <div className="panelHeader">
                 <h2>Fastest Times</h2>
                 <span>{leaderboard.length}</span>
@@ -1344,6 +1401,421 @@ function ResetPage({ onReset, busy, error, success }) {
   );
 }
 
+function formatScore(score) {
+  if (!Number.isFinite(score)) return "0.000";
+
+  return score.toFixed(3);
+}
+
+function VectorPreview({ values = [], label }) {
+  const maxAbs = Math.max(0.01, ...values.map((value) => Math.abs(value)));
+
+  return (
+    <div className="vectorPreview">
+      <span className="muted">{label}</span>
+      <div className="vectorBars" aria-label={label}>
+        {values.map((value, index) => {
+          const height = 14 + (Math.abs(value) / maxAbs) * 46;
+
+          return (
+            <span
+              key={`${label}-${index}`}
+              className={value >= 0 ? "vectorBar positive" : "vectorBar negative"}
+              style={{ height: `${height}px` }}
+              title={`d${index + 1}: ${value.toFixed(4)}`}
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function SimilarityGraph({ pair, neighbors = [] }) {
+  const width = 720;
+  const height = 390;
+  const cx = width / 2;
+  const cy = height / 2;
+  const best = Math.max(0.01, ...neighbors.map((item) => item.score || 0));
+  const worst = Math.min(best, ...neighbors.map((item) => item.score || best));
+  const span = Math.max(0.01, best - worst);
+
+  const nodes = neighbors.map((neighbor, index) => {
+    const angle = -Math.PI / 2 + (index / Math.max(neighbors.length, 1)) * Math.PI * 2;
+    const closeness = (neighbor.score - worst) / span;
+    const radius = 72 + (1 - closeness) * 118;
+
+    return {
+      ...neighbor,
+      x: cx + Math.cos(angle) * radius,
+      y: cy + Math.sin(angle) * radius,
+      closeness
+    };
+  });
+
+  return (
+    <svg
+      className="similarityGraph"
+      viewBox={`0 0 ${width} ${height}`}
+      role="img"
+      aria-label="Similarity graph"
+    >
+      <defs>
+        <radialGradient id="targetGlow">
+          <stop offset="0%" stopColor="#f0b429" stopOpacity="0.34" />
+          <stop offset="100%" stopColor="#f0b429" stopOpacity="0" />
+        </radialGradient>
+      </defs>
+      <circle cx={cx} cy={cy} r="96" fill="url(#targetGlow)" />
+      {nodes.map((node) => (
+        <line
+          key={`line-${node.id}`}
+          x1={cx}
+          y1={cy}
+          x2={node.x}
+          y2={node.y}
+          stroke="rgba(91, 156, 255, 0.42)"
+          strokeWidth={1.5 + node.closeness * 4}
+        />
+      ))}
+      <circle cx={cx} cy={cy} r="42" fill="#f0b429" />
+      <text x={cx} y={cy - 5} textAnchor="middle" className="graphTargetText">
+        {pair?.a?.name}
+      </text>
+      <text x={cx} y={cy + 16} textAnchor="middle" className="graphTargetText">
+        + {pair?.b?.name}
+      </text>
+      {nodes.map((node) => (
+        <g key={node.id}>
+          <circle
+            cx={node.x}
+            cy={node.y}
+            r={24 + node.closeness * 10}
+            fill="#141c2b"
+            stroke="#5b9cff"
+            strokeWidth={1.5 + node.closeness * 2}
+          />
+          <text x={node.x} y={node.y - 3} textAnchor="middle" className="graphNodeEmoji">
+            {node.resultEmoji || "âœ¨"}
+          </text>
+          <text x={node.x} y={node.y + 38} textAnchor="middle" className="graphNodeText">
+            {node.resultName}
+          </text>
+          <text x={node.x} y={node.y + 55} textAnchor="middle" className="graphScoreText">
+            {formatScore(node.score)}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+
+function CraftSearchPicker({
+  label,
+  value,
+  onChange,
+  crafts,
+  disabled,
+  placeholder = "Search Crafts..."
+}) {
+  const [query, setQuery] = React.useState("");
+  const selectedCraft = crafts.find(
+    (craft) => craft.name.toLowerCase() === String(value).toLowerCase(),
+  );
+
+  const filteredCrafts = React.useMemo(() => {
+    const q = query.trim().toLowerCase();
+    const matches = q
+      ? crafts.filter((craft) =>
+          `${craft.emoji || ""} ${craft.name}`.toLowerCase().includes(q),
+        )
+      : crafts;
+
+    return matches.slice(0, 24);
+  }, [crafts, query]);
+
+  return (
+    <div className="craftPicker">
+      <label>
+        {label}
+        <input
+          className="search craftPickerSearch"
+          placeholder={placeholder}
+          value={query}
+          disabled={disabled}
+          onChange={(event) => setQuery(event.target.value)}
+        />
+      </label>
+
+      {selectedCraft && (
+        <div className="craftPickerSelected">
+          <span className="muted">Selected</span>
+          <Chip item={selectedCraft} active />
+        </div>
+      )}
+
+      <div className="craftPickerResults">
+        {filteredCrafts.length === 0 ? (
+          <p className="empty craftPickerEmpty">No Crafts Match That Search.</p>
+        ) : (
+          filteredCrafts.map((craft) => {
+            const isSelected =
+              craft.name.toLowerCase() === String(value).toLowerCase();
+
+            return (
+              <button
+                key={`${label}-${craft.name}`}
+                type="button"
+                className={
+                  isSelected
+                    ? "elementButton craftPickerItem active"
+                    : "elementButton craftPickerItem"
+                }
+                disabled={disabled}
+                onClick={() => {
+                  onChange(craft.name);
+                  setQuery("");
+                }}
+              >
+                <span>{craft.emoji || "Ã¢Å“Â¨"}</span>
+                {craft.name}
+              </button>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+}
+
+function HowItWorksPage({
+  apiBase,
+  allCrafts,
+  localCrafts,
+  craftsLoading,
+  ensureCraftsLoaded
+}) {
+  const [wordA, setWordA] = React.useState("");
+  const [wordB, setWordB] = React.useState("");
+  const [loading, setLoading] = React.useState(false);
+  const [error, setError] = React.useState("");
+  const [insight, setInsight] = React.useState(null);
+
+  const availableCrafts = React.useMemo(() => {
+    const craftMap = new Map();
+
+    for (const craft of [...allCrafts, ...localCrafts]) {
+      const name = String(craft?.name || "").trim();
+      if (!name) continue;
+
+      const key = name.toLowerCase();
+      if (!craftMap.has(key)) {
+        craftMap.set(key, {
+          name,
+          emoji: craft.emoji || "Ã¢Å“Â¨"
+        });
+      }
+    }
+
+    return Array.from(craftMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name),
+    );
+  }, [allCrafts, localCrafts]);
+
+  React.useEffect(() => {
+    ensureCraftsLoaded();
+  }, [ensureCraftsLoaded]);
+
+  React.useEffect(() => {
+    if (!availableCrafts.length) return;
+
+    setWordA((current) => {
+      if (
+        current &&
+        availableCrafts.some(
+          (craft) => craft.name.toLowerCase() === current.toLowerCase(),
+        )
+      ) {
+        return current;
+      }
+
+      return availableCrafts[0]?.name || "";
+    });
+
+    setWordB((current) => {
+      if (
+        current &&
+        availableCrafts.some(
+          (craft) => craft.name.toLowerCase() === current.toLowerCase(),
+        )
+      ) {
+        return current;
+      }
+
+      return availableCrafts[1]?.name || availableCrafts[0]?.name || "";
+    });
+  }, [availableCrafts]);
+
+  async function inspectSimilarity(event) {
+    event.preventDefault();
+
+    if (!wordA || !wordB) {
+      setError("Choose two words first.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+
+    try {
+      const response = await fetch(`${apiBase}/api/insights/similarity`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          a: wordA,
+          b: wordB
+        })
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Could not inspect vectors.");
+      }
+
+      setInsight(data);
+    } catch (err) {
+      setError(err.message || "Could not inspect vectors.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const hasNeighbors = insight?.neighbors?.length > 0;
+
+  return (
+    <section className="insightsPage">
+      <div className="insightsIntro">
+        <section className="panel insightExplainPanel">
+          <div className="panelHeader">
+            <h2>Generation Pipeline</h2>
+            <span>3 Steps</span>
+          </div>
+          <ol className="pipelineList">
+            <li>
+              <strong>Embed The Pair</strong>
+              <p>The server turns the selected words into one embedding for text like "Food + City".</p>
+            </li>
+            <li>
+              <strong>Find Similar Recipes</strong>
+              <p>It compares that vector with stored recipe vectors using cosine similarity.</p>
+            </li>
+            <li>
+              <strong>Generate With Context</strong>
+              <p>The closest recipe names are sent to the generation model as examples for the new result.</p>
+            </li>
+          </ol>
+        </section>
+
+        <section className="panel insightControlPanel">
+          <form className="startForm" onSubmit={inspectSimilarity}>
+            <div className="panelHeader">
+              <h2>Vector Inspector</h2>
+              <span>{craftsLoading ? "..." : availableCrafts.length}</span>
+            </div>
+
+            <CraftSearchPicker
+              label="First Word"
+              value={wordA}
+              onChange={setWordA}
+              crafts={availableCrafts}
+              disabled={craftsLoading || loading}
+              placeholder="Search Global And New Crafts..."
+            />
+
+            <CraftSearchPicker
+              label="Second Word"
+              value={wordB}
+              onChange={setWordB}
+              crafts={availableCrafts}
+              disabled={craftsLoading || loading}
+              placeholder="Search Global And New Crafts..."
+            />
+
+            {error && <div className="error">{error}</div>}
+
+            <button
+              className="primaryButton"
+              type="submit"
+              disabled={craftsLoading || loading || !availableCrafts.length}
+            >
+              {loading ? "Inspecting..." : "Inspect Similarity"}
+            </button>
+          </form>
+        </section>
+      </div>
+
+      {insight && (
+        <>
+          <section className="panel insightResultPanel">
+            <div className="panelHeader">
+              <h2>Nearest Recipe Vectors</h2>
+              <span>{hasNeighbors ? insight.neighbors.length : 0}</span>
+            </div>
+
+            {!hasNeighbors ? (
+              <p className="empty">
+                No stored recipe embeddings yet. Generated recipes will add vectors for future comparisons.
+              </p>
+            ) : (
+              <div className="insightGraphGrid">
+                <SimilarityGraph pair={insight.pair} neighbors={insight.neighbors} />
+                <div className="similarityList">
+                  {insight.neighbors.map((neighbor) => (
+                    <article className="similarityRecipe" key={neighbor.id}>
+                      <div>
+                        <strong>
+                          {neighbor.a} + {neighbor.b} = {neighbor.resultEmoji}{" "}
+                          {neighbor.resultName}
+                        </strong>
+                        <span>Cosine {formatScore(neighbor.score)}</span>
+                      </div>
+                      <div
+                        className="scoreMeter"
+                        style={{
+                          "--score": `${Math.max(8, Math.round(neighbor.score * 100))}%`
+                        }}
+                      />
+                    </article>
+                  ))}
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section className="panel insightPayloadPanel">
+            <div className="panelHeader">
+              <h2>What Gets Sent</h2>
+              <span>{insight.generationPayload.model}</span>
+            </div>
+            <p className="payloadNote">
+              The raw embedding is used for search. The generation request receives the closest recipe text as context.
+            </p>
+            <VectorPreview
+              label={`${insight.embedding.model} preview (${insight.embedding.dimensions} dimensions)`}
+              values={insight.embedding.preview}
+            />
+            <pre className="payloadBox">
+{JSON.stringify(insight.generationPayload.similarRecipes, null, 2)}
+            </pre>
+          </section>
+        </>
+      )}
+    </section>
+  );
+}
+
 function getPageMeta(page, challenge, practiceSession, practiceComplete) {
   if (page === "race") {
     return {
@@ -1380,6 +1852,15 @@ function getPageMeta(page, challenge, practiceSession, practiceComplete) {
     return {
       eyebrow: "Craft Explorer",
       title: "NYCrafts Graph",
+    };
+  }
+
+  if (page === "insights") {
+    return {
+      eyebrow: "Under The Hood",
+      title: "How It Works",
+      subtitle:
+        "Pick any two global words and inspect the embedding neighbors that guide new craft generation.",
     };
   }
 
@@ -1440,49 +1921,39 @@ function App() {
       });
   }, []);
 
-  useEffect(() => {
-    if (raceMode !== "practice" || allCrafts.length > 0) return undefined;
+  const loadAllCrafts = useCallback(async () => {
+    if (allCrafts.length > 0 || craftsLoading) return;
 
-    let cancelled = false;
+    try {
+      setCraftsLoading(true);
 
-    async function loadCrafts() {
-      try {
-        setCraftsLoading(true);
+      const response = await fetch(`${API_BASE}/api/elements/global`);
 
-        const response = await fetch(`${API_BASE}/api/elements/global`);
-
-        if (!response.ok) {
-          throw new Error("Could not load crafts.");
-        }
-
-        const data = await response.json();
-
-        if (cancelled) return;
-
-        setAllCrafts(
-          Array.isArray(data.elements)
-            ? [...data.elements].sort((a, b) =>
-                String(a.name).localeCompare(String(b.name)),
-              )
-            : [],
-        );
-      } catch {
-        if (!cancelled) {
-          setError("Could Not Load Crafts For Practice.");
-        }
-      } finally {
-        if (!cancelled) {
-          setCraftsLoading(false);
-        }
+      if (!response.ok) {
+        throw new Error("Could not load crafts.");
       }
+
+      const data = await response.json();
+
+      setAllCrafts(
+        Array.isArray(data.elements)
+          ? [...data.elements].sort((a, b) =>
+              String(a.name).localeCompare(String(b.name)),
+            )
+          : [],
+      );
+    } catch {
+      setError("Could Not Load Global Crafts.");
+    } finally {
+      setCraftsLoading(false);
     }
+  }, [allCrafts.length, craftsLoading]);
 
-    loadCrafts();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [raceMode, allCrafts.length]);
+  useEffect(() => {
+    if (raceMode === "practice" || page === "insights") {
+      loadAllCrafts();
+    }
+  }, [raceMode, page, loadAllCrafts]);
 
   useEffect(() => {
     if (!challenge || challenge.completed) return undefined;
@@ -1838,7 +2309,10 @@ function App() {
           : current,
       );
       setElapsedMs(data.session.durationMs);
-      setWinner(data.session);
+      setWinner({
+        ...data.session,
+        standing: data.standing || null,
+      });
       setLeaderboard(data.leaderboard || []);
     } catch (err) {
       setError(err.message || "Could not finish challenge.");
@@ -1997,6 +2471,7 @@ function App() {
         }}
         dailyTarget={dailyTarget}
         leaderboard={leaderboard}
+        winner={winner}
         playerName={playerName}
         onPlayerNameChange={setPlayerName}
         onStartDaily={startChallenge}
@@ -2017,6 +2492,16 @@ function App() {
     );
   } else if (page === "map") {
     pageBody = <MapPage apiBase={API_BASE} graphVersion={graphVersion} />;
+  } else if (page === "insights") {
+    pageBody = (
+      <HowItWorksPage
+        apiBase={API_BASE}
+        allCrafts={allCrafts}
+        localCrafts={elements}
+        craftsLoading={craftsLoading}
+        ensureCraftsLoaded={loadAllCrafts}
+      />
+    );
   } else if (page === "reset") {
     pageBody = (
       <ResetPage

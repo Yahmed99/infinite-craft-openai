@@ -664,3 +664,24 @@ export function getChallengeLeaderboard(targetName, limit = 10) {
     LIMIT ?
   `).all(targetName, limit);
 }
+
+export function getChallengeScoreStanding(sessionId) {
+  return db.prepare(`
+    WITH ranked_scores AS (
+      SELECT
+        session_id AS sessionId,
+        target_name AS targetName,
+        duration_ms AS durationMs,
+        completed_at AS completedAt,
+        ROW_NUMBER() OVER (
+          PARTITION BY LOWER(target_name)
+          ORDER BY duration_ms ASC, completed_at ASC
+        ) AS standing,
+        COUNT(*) OVER (PARTITION BY LOWER(target_name)) AS totalRuns
+      FROM challenge_scores
+    )
+    SELECT sessionId, targetName, durationMs, completedAt, standing, totalRuns
+    FROM ranked_scores
+    WHERE sessionId = ?
+  `).get(sessionId);
+}

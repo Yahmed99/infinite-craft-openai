@@ -51,7 +51,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -517,6 +518,228 @@ input {
   background: var(--error-bg);
 }
 
+.insightsPage {
+  display: grid;
+  gap: 18px;
+}
+
+.insightsIntro,
+.insightGraphGrid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(280px, 1fr);
+  gap: 18px;
+  align-items: stretch;
+}
+
+.insightExplainPanel,
+.insightControlPanel,
+.insightResultPanel,
+.insightPayloadPanel {
+  min-height: 0;
+}
+
+.pipelineList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.pipelineList li {
+  border-left: 3px solid var(--accent);
+  padding-left: 12px;
+}
+
+.pipelineList strong {
+  color: var(--text);
+}
+
+.pipelineList p,
+.payloadNote {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.selectInput {
+  appearance: none;
+  margin-bottom: 0;
+  cursor: pointer;
+}
+
+.craftPicker {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.craftPickerSearch {
+  margin-bottom: 0;
+}
+
+.craftPickerSelected {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.craftPickerSelected .muted {
+  margin-bottom: 0;
+}
+
+.craftPickerResults {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: flex-start;
+  gap: 8px;
+  max-height: 176px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.craftPickerResults::-webkit-scrollbar {
+  width: 8px;
+}
+
+.craftPickerResults::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 4px;
+}
+
+.craftPickerItem {
+  justify-content: flex-start;
+  max-width: 100%;
+}
+
+.craftPickerItem.active {
+  border-color: var(--accent);
+  background: var(--accent-dim);
+  color: var(--accent);
+}
+
+.craftPickerEmpty {
+  margin: 0;
+}
+
+.similarityGraph {
+  width: 100%;
+  min-height: 320px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: #0a0e14;
+}
+
+.graphTargetText {
+  fill: var(--accent-text);
+  font-size: 15px;
+  font-weight: 900;
+}
+
+.graphNodeEmoji {
+  fill: var(--text);
+  font-size: 22px;
+}
+
+.graphNodeText {
+  fill: var(--text);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.graphScoreText {
+  fill: var(--text-muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.similarityList {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.similarityRecipe {
+  display: grid;
+  gap: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 11px;
+  background: var(--bg-elevated);
+}
+
+.similarityRecipe div:first-child {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.similarityRecipe strong {
+  color: var(--text);
+}
+
+.similarityRecipe span {
+  color: var(--blue);
+  font-size: 0.82rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.scoreMeter {
+  height: 8px;
+  border-radius: 6px;
+  background:
+    linear-gradient(90deg, var(--blue) var(--score), transparent 0),
+    var(--surface-hover);
+  overflow: hidden;
+}
+
+.vectorPreview {
+  display: grid;
+  gap: 8px;
+  margin: 12px 0;
+}
+
+.vectorBars {
+  height: 70px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.vectorBar {
+  width: 100%;
+  max-width: 18px;
+  border-radius: 4px;
+}
+
+.vectorBar.positive {
+  background: var(--blue);
+}
+
+.vectorBar.negative {
+  background: var(--orange);
+}
+
+.payloadBox {
+  max-height: 280px;
+  overflow: auto;
+  margin: 12px 0 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  color: var(--text);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
 .successBanner {
   background: var(--success-bg);
   border: 1px solid var(--success-border);
@@ -860,6 +1083,66 @@ h2 {
   border-color: var(--success-border);
 }
 
+.raceResultCard {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding: 14px;
+  border: 1px solid var(--success-border);
+  border-radius: var(--radius);
+  background: var(--success-bg);
+}
+
+.raceResultHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.raceResultHeader strong {
+  display: block;
+  font-size: 1.25rem;
+  color: var(--text);
+}
+
+.raceResultRank {
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-text);
+  padding: 7px 10px;
+  font-weight: 900;
+}
+
+.raceResultStats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.raceResultStats div {
+  min-width: 0;
+  border: 1px solid var(--success-border);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(8, 12, 18, 0.28);
+}
+
+.raceResultStats span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--success-text);
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
+.raceResultStats strong {
+  display: block;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
 .leaderboard {
   list-style: none;
   margin: 0;
@@ -986,7 +1269,9 @@ h2 {
   }
 
   .raceLayout,
-  .grid {
+  .grid,
+  .insightsIntro,
+  .insightGraphGrid {
     grid-template-columns: 1fr;
   }
 
@@ -1016,5 +1301,48 @@ h2 {
   .gameBar,
   .winBanner {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .appShell {
+    width: min(100% - 20px, 1180px);
+    padding-top: 16px;
+  }
+
+  .insightControlPanel,
+  .insightResultPanel,
+  .insightPayloadPanel {
+    padding: 14px;
+  }
+
+  .craftPickerResults {
+    max-height: 220px;
+  }
+
+  .craftPickerItem {
+    width: 100%;
+  }
+
+  .similarityGraph {
+    min-height: 250px;
+  }
+
+  .similarityRecipe div:first-child {
+    display: grid;
+    gap: 4px;
+  }
+
+  .similarityRecipe span {
+    white-space: normal;
+  }
+
+  .vectorBars {
+    gap: 3px;
+    padding: 6px;
+  }
+
+  .payloadBox {
+    font-size: 0.76rem;
   }
 }
