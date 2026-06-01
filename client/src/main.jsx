@@ -15,16 +15,16 @@ const STARTERS = [
     emoji: "🧍",
   },
   {
-    name: "Place",
-    emoji: "📍",
-  },
-  {
     name: "Food",
-    emoji: "🍕",
+    emoji: "🍽️",
   },
   {
     name: "Transit",
     emoji: "🚇",
+  },
+  {
+    name: "City",
+    emoji: "🏙️",
   },
   {
     name: "Money",
@@ -35,12 +35,20 @@ const STARTERS = [
     emoji: "⏰",
   },
   {
-    name: "Weather",
-    emoji: "🌧️",
+    name: "Music",
+    emoji: "🎵",
+  },
+  {
+    name: "Sports",
+    emoji: "🏆",
   },
   {
     name: "Culture",
     emoji: "🎭",
+  },
+  {
+    name: "Words",
+    emoji: "🗣️",
   },
 ];
 
@@ -1349,8 +1357,6 @@ function getPageMeta(page, challenge, practiceSession, practiceComplete) {
       return {
         eyebrow: "Daily Challenge",
         title: "Find The Word",
-        subtitle:
-          "Combine Elements Until You Craft The Target. Pause The Timer Anytime From The Game Bar.",
       };
     }
 

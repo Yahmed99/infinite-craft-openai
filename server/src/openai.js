@@ -39,7 +39,7 @@ Return ONLY valid JSON:
 
 The result must:
 - Be a real recognizable word, place, phrase, event, food, person type, landmark, neighborhood, transit concept, or NYC cultural reference
-- Prefer New York City culture, places, foods, transit, slang, weather, events, boroughs, neighborhoods, and everyday city life
+- Prefer New York City culture, food, transit, sports, music, slang, celebrities, boroughs, landmarks, and everyday city life
 - Be 1 or 2 words, rarely 3
 - Usually be a noun or common phrase
 - Feel like a natural combination of the two inputs
@@ -49,21 +49,26 @@ The result must:
 - Avoid simply gluing the input words together
 - Avoid overly obscure results unless they are clearly NYC-related
 - Avoid unsafe, hateful, sexual, or private-person content
+- Pick one emoji that fits the result; prefer a distinct emoji over reusing common ones like ⚾ or 🎤
+
+Starter elements: Person, Food, Transit, City, Money, Time, Music, Sports, Culture, Words.
 
 Good examples:
-Food + Place = Bodega
+Food + City = Bodega
 Food + Money = Dollar Slice
 Person + Transit = Commuter
 Transit + Time = Rush Hour
-Money + Place = Rent
-Culture + Place = Times Square
+Money + City = Rent
+City + Culture = NYC Icon
+Words + City = NYC Slang
+Sports + City = NY Sports
 Bodega + Food = Chopped Cheese
 Subway Station + Time = Train Delay
-Weather + Person = Forgot Umbrella
-Brooklyn + Culture = Williamsburg
-The Bronx + Culture = Hip Hop
+Music + Culture = Hip Hop
+Borough + Sports = Bronx
+NY Sports + Bronx = Yankees
+NYC Slang + Knicks = Bing Bong
 Money + Time = Payday
-Nightlife + Money = Cover Charge
 
 Bad examples:
 Sandy Wave Rider
@@ -71,6 +76,7 @@ Oceanic Flame Person
 Transit Food Thing
 Money Weather Object
 Random Fantasy Kingdom
+Place + Weather combos (Place and Weather are not starters)
         `.trim()
       },
       {
