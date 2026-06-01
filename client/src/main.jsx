@@ -106,7 +106,7 @@ const PAGES = {
   race: { id: "race", label: "Race" },
   sandbox: { id: "sandbox", label: "Sandbox" },
   map: { id: "map", label: "Map" },
-  insights: { id: "insights", label: "How It Works" },
+  insights: { id: "insights", label: "How it works" },
   reset: { id: "reset", label: "Reset" },
 };
 
@@ -177,6 +177,57 @@ function AppShell({
         {children}
       </div>
     </main>
+  );
+}
+
+function ConfettiBurst({ runId, onDone }) {
+  const pieces = React.useMemo(() => {
+    if (!runId) return [];
+
+    const colors = ["#e0b35a", "#5b9cff", "#86efac", "#ff9b54", "#e8edf5"];
+
+    return Array.from({ length: 72 }, (_, index) => ({
+      id: `${runId}-${index}`,
+      color: colors[index % colors.length],
+      left: 8 + Math.random() * 84,
+      delay: Math.random() * 0.18,
+      duration: 1.75 + Math.random() * 0.85,
+      drift: -120 + Math.random() * 240,
+      rotate: -240 + Math.random() * 480,
+      size: 6 + Math.random() * 7,
+    }));
+  }, [runId]);
+
+  React.useEffect(() => {
+    if (!runId) return undefined;
+
+    const timer = window.setTimeout(() => {
+      onDone?.();
+    }, 2900);
+
+    return () => window.clearTimeout(timer);
+  }, [runId, onDone]);
+
+  if (!runId) return null;
+
+  return (
+    <div className="confettiLayer" aria-hidden="true">
+      {pieces.map((piece) => (
+        <span
+          key={piece.id}
+          className="confettiPiece"
+          style={{
+            "--confetti-color": piece.color,
+            "--confetti-left": `${piece.left}%`,
+            "--confetti-delay": `${piece.delay}s`,
+            "--confetti-duration": `${piece.duration}s`,
+            "--confetti-drift": `${piece.drift}px`,
+            "--confetti-rotate": `${piece.rotate}deg`,
+            "--confetti-size": `${piece.size}px`,
+          }}
+        />
+      ))}
+    </div>
   );
 }
 
@@ -477,7 +528,7 @@ function MapPage({ apiBase, graphVersion }) {
         console.error(err);
 
         if (!cancelled) {
-          setError("Could Not Load Global Recipe Map.");
+          setError("Could not load the recipe map.");
         }
       } finally {
         if (!cancelled) {
@@ -790,13 +841,13 @@ function MapPage({ apiBase, graphVersion }) {
       <section className="mapLayout">
         <aside className="mapSidebar">
           <div className="mapSidebarHeader">
-            <h2>Craft Graph</h2>
+            <h2>Craft graph</h2>
             <span>{loading ? "…" : graph.nodes.length}</span>
           </div>
 
           <input
             className="search mapSearchInput"
-            placeholder="Search Crafts…"
+            placeholder="Search crafts..."
             value={query}
             disabled={loading}
             onChange={(event) => setQuery(event.target.value)}
@@ -805,10 +856,10 @@ function MapPage({ apiBase, graphVersion }) {
 
           {(loading || query.trim()) && (
             <div className="mapSearchResults">
-              {loading && <p className="empty">Loading Craft Graph…</p>}
+              {loading && <p className="empty">Loading craft graph...</p>}
 
               {!loading && query.trim() && filteredNodes.length === 0 && (
-                <p className="empty">No Crafts Match That Search.</p>
+                <p className="empty">No crafts match that search.</p>
               )}
 
               {!loading &&
@@ -835,7 +886,7 @@ function MapPage({ apiBase, graphVersion }) {
 
               {!loading && hiddenSearchCount > 0 && (
                 <p className="empty mapSearchMore">
-                  +{hiddenSearchCount} More — Refine Your Search.
+                  +{hiddenSearchCount} more. Refine your search.
                 </p>
               )}
             </div>
@@ -844,7 +895,7 @@ function MapPage({ apiBase, graphVersion }) {
           {selectedNode && (
             <div className="mapSelectedCraft">
               <div className="mapSelectedSummary">
-                <span className="muted">Selected Craft</span>
+                <span className="muted">Selected craft</span>
                 <div className="mapSelectedHero">
                   <span>{selectedNode.emoji || "✨"}</span>
                   <strong>{selectedNode.label}</strong>
@@ -856,7 +907,7 @@ function MapPage({ apiBase, graphVersion }) {
                   Parent ({directConnections.incoming.length})
                 </span>
                 {directConnections.incoming.length === 0 ? (
-                  <p className="empty mapConnectionEmpty">No Parent Crafts.</p>
+                  <p className="empty mapConnectionEmpty">No parent crafts.</p>
                 ) : (
                   <div className="mapConnectionList">
                     {directConnections.incoming.map((node) => (
@@ -879,7 +930,7 @@ function MapPage({ apiBase, graphVersion }) {
                   Child ({directConnections.outgoing.length})
                 </span>
                 {directConnections.outgoing.length === 0 ? (
-                  <p className="empty mapConnectionEmpty">No Child Crafts.</p>
+                  <p className="empty mapConnectionEmpty">No child crafts.</p>
                 ) : (
                   <div className="mapConnectionList">
                     {directConnections.outgoing.map((node) => (
@@ -909,12 +960,12 @@ function MapPage({ apiBase, graphVersion }) {
                 onClick={resetGraphView}
                 disabled={loading || graph.nodes.length === 0}
               >
-                Reset View
+                Reset view
               </button>
             </div>
             {loading && (
               <div className="mapLoadingOverlay">
-                <div className="loader">Loading Graph…</div>
+                <div className="loader">Loading graph...</div>
               </div>
             )}
             <ForceGraph3D
@@ -1001,7 +1052,7 @@ function MapPage({ apiBase, graphVersion }) {
                 <b className="dot outgoing-dot" /> Outgoing
               </span>
               <span className="mapLegendHint">
-                Scroll To Zoom • Drag To Rotate
+                Scroll to zoom. Drag to rotate.
               </span>
             </div>
           </div>
@@ -1013,7 +1064,7 @@ function MapPage({ apiBase, graphVersion }) {
 
 function Leaderboard({ scores = [] }) {
   if (!scores.length) {
-    return <p className="empty">No Winning Runs Yet. Set The First Time.</p>;
+    return <p className="empty">No winning runs yet. Set the first time.</p>;
   }
 
   return (
@@ -1044,11 +1095,11 @@ function RaceResultCard({ winner, dailyTarget, leaderboard }) {
     <article className="raceResultCard">
       <div className="raceResultHeader">
         <div>
-          <span className="muted">Completed Run</span>
+          <span className="muted">Finished run</span>
           <strong>{winner.playerName || "Guest"}</strong>
         </div>
         <span className="raceResultRank">
-          {standing ? `#${standing}` : "Rank Pending"}
+          {standing ? `#${standing}` : "Rank pending"}
         </span>
       </div>
 
@@ -1070,7 +1121,7 @@ function RaceResultCard({ winner, dailyTarget, leaderboard }) {
           </strong>
         </div>
         <div>
-          <span>Behind Best</span>
+          <span>Behind best</span>
           <strong>{gapToBest === null ? "Pending" : formatDuration(gapToBest)}</strong>
         </div>
       </div>
@@ -1148,7 +1199,7 @@ function RacePage({
       {raceActive && (
         <section className="statusBanner">
           <p>
-            Daily Challenge In Progress For{" "}
+            Daily challenge in progress for{" "}
             <strong>{playerName || "Guest"}</strong>.
           </p>
           <button
@@ -1156,7 +1207,7 @@ function RacePage({
             type="button"
             onClick={onContinueDaily}
           >
-            Continue Challenge
+            Continue
           </button>
         </section>
       )}
@@ -1164,7 +1215,7 @@ function RacePage({
       {practiceActive && (
         <section className="statusBanner">
           <p>
-            Practice In Progress For{" "}
+            Practice in progress for{" "}
             <strong>
               {practiceSession.target.emoji} {practiceSession.target.name}
             </strong>
@@ -1175,7 +1226,7 @@ function RacePage({
             type="button"
             onClick={onContinuePractice}
           >
-            Continue Practice
+            Continue
           </button>
         </section>
       )}
@@ -1189,12 +1240,12 @@ function RacePage({
           disabled={practiceActive}
           title={
             practiceActive
-              ? "Finish Or End Practice Before Switching Modes."
+              ? "Finish or end practice before switching modes."
               : undefined
           }
           onClick={() => onModeChange("daily")}
         >
-          Daily Challenge
+          Daily challenge
         </button>
         <button
           type="button"
@@ -1204,7 +1255,7 @@ function RacePage({
           disabled={raceActive}
           title={
             raceActive
-              ? "Finish Or Cancel The Daily Challenge Before Switching Modes."
+              ? "Finish or cancel the daily challenge before switching modes."
               : undefined
           }
           onClick={() => onModeChange("practice")}
@@ -1219,13 +1270,13 @@ function RacePage({
             <section className="panel racePanel">
               <form className="startForm" onSubmit={onStartDaily}>
                 <label>
-                  Player Name
+                  Player name
                   <input
                     className="search"
                     value={playerName}
                     maxLength={24}
                     onChange={(event) => onPlayerNameChange(event.target.value)}
-                    placeholder="Your Name"
+                    placeholder="Your name"
                   />
                 </label>
 
@@ -1248,8 +1299,8 @@ function RacePage({
                   {loading
                     ? "Starting…"
                     : raceActive
-                      ? "Restart Challenge"
-                      : "Start Daily Challenge"}
+                      ? "Restart challenge"
+                      : "Start daily challenge"}
                 </button>
               </form>
             </section>
@@ -1262,7 +1313,7 @@ function RacePage({
               />
 
               <div className="panelHeader">
-                <h2>Fastest Times</h2>
+                <h2>Fastest times</h2>
                 <span>{leaderboard.length}</span>
               </div>
               <Leaderboard scores={leaderboard} />
@@ -1273,13 +1324,13 @@ function RacePage({
             <section className="panel racePanel">
               <form className="startForm" onSubmit={onStartPractice}>
                 <div className="panelHeader">
-                  <h2>Choose Target Craft</h2>
+                  <h2>Choose a target</h2>
                   <span>{craftsLoading ? "…" : practiceCrafts.length}</span>
                 </div>
 
                 <input
                   className="search"
-                  placeholder="Search Crafts To Combine Toward…"
+                  placeholder="Search crafts to practice..."
                   value={practiceQuery}
                   disabled={craftsLoading}
                   onChange={(event) => onPracticeQueryChange(event.target.value)}
@@ -1287,13 +1338,13 @@ function RacePage({
 
                 <div className="practiceCraftList">
                   {craftsLoading && (
-                    <p className="empty">Loading Crafts…</p>
+                    <p className="empty">Loading crafts...</p>
                   )}
 
                   {!craftsLoading && !practiceQuery.trim() && (
                     <p className="empty">
-                      Search For A Craft To Practice Reaching. Starter Elements
-                      Are Already Available.
+                      Search for a craft to practice reaching. Starter elements
+                      are already available.
                     </p>
                   )}
 
@@ -1302,8 +1353,8 @@ function RacePage({
                     filteredCrafts.length === 0 &&
                     starterMatches.length > 0 && (
                       <p className="empty">
-                        Starter Elements Are Already Available At The Start. Pick
-                        A Craft To Combine Toward.
+                        Starter elements are already available at the start. Pick
+                        a craft to combine toward.
                       </p>
                     )}
 
@@ -1311,7 +1362,7 @@ function RacePage({
                     practiceQuery.trim() &&
                     filteredCrafts.length === 0 &&
                     starterMatches.length === 0 && (
-                      <p className="empty">No Crafts Match That Search.</p>
+                      <p className="empty">No crafts match that search.</p>
                     )}
 
                   {!craftsLoading &&
@@ -1340,14 +1391,14 @@ function RacePage({
 
                   {!craftsLoading && hiddenCraftCount > 0 && (
                     <p className="empty practiceCraftMore">
-                      +{hiddenCraftCount} More — Refine Your Search.
+                      +{hiddenCraftCount} more. Refine your search.
                     </p>
                   )}
                 </div>
 
                 {practiceTarget && (
                   <div className="targetCallout">
-                    <span>Practice Target</span>
+                    <span>Practice target</span>
                     <strong>
                       {practiceTarget.emoji} {practiceTarget.name}
                     </strong>
@@ -1366,8 +1417,8 @@ function RacePage({
                   {loading
                     ? "Starting…"
                     : practiceActive
-                      ? "Restart Practice"
-                      : "Start Practice"}
+                      ? "Restart practice"
+                      : "Start practice"}
                 </button>
               </form>
             </section>
@@ -1381,8 +1432,8 @@ function RacePage({
 function ResetPage({ onReset, busy, error, success }) {
   return (
     <div className="resetPage">
-      <h2 className="resetTitle">Reset Progress</h2>
-      <p className="resetHint">Clears Crafts And Elements On This Device.</p>
+      <h2 className="resetTitle">Reset progress</h2>
+      <p className="resetHint">Clears crafts and elements on this device.</p>
 
       {error && <div className="resetMessage resetMessageError">{error}</div>}
       {success && (
@@ -1395,7 +1446,7 @@ function ResetPage({ onReset, busy, error, success }) {
         onClick={onReset}
         disabled={busy}
       >
-        {busy ? "Resetting…" : "Reset"}
+        {busy ? "Resetting..." : "Reset"}
       </button>
     </div>
   );
@@ -1516,7 +1567,7 @@ function CraftSearchPicker({
   onChange,
   crafts,
   disabled,
-  placeholder = "Search Crafts..."
+  placeholder = "Search crafts..."
 }) {
   const [query, setQuery] = React.useState("");
   const selectedCraft = crafts.find(
@@ -1556,7 +1607,7 @@ function CraftSearchPicker({
 
       <div className="craftPickerResults">
         {filteredCrafts.length === 0 ? (
-          <p className="empty craftPickerEmpty">No Crafts Match That Search.</p>
+          <p className="empty craftPickerEmpty">No crafts match that search.</p>
         ) : (
           filteredCrafts.map((craft) => {
             const isSelected =
@@ -1699,20 +1750,20 @@ function HowItWorksPage({
       <div className="insightsIntro">
         <section className="panel insightExplainPanel">
           <div className="panelHeader">
-            <h2>Generation Pipeline</h2>
-            <span>3 Steps</span>
+              <h2>Generation pipeline</h2>
+              <span>3 steps</span>
           </div>
           <ol className="pipelineList">
             <li>
-              <strong>Embed The Pair</strong>
+              <strong>Embed the pair</strong>
               <p>The server turns the selected words into one embedding for text like "Food + City".</p>
             </li>
             <li>
-              <strong>Find Similar Recipes</strong>
+              <strong>Find similar recipes</strong>
               <p>It compares that vector with stored recipe vectors using cosine similarity.</p>
             </li>
             <li>
-              <strong>Generate With Context</strong>
+              <strong>Generate with context</strong>
               <p>The closest recipe names are sent to the generation model as examples for the new result.</p>
             </li>
           </ol>
@@ -1721,26 +1772,26 @@ function HowItWorksPage({
         <section className="panel insightControlPanel">
           <form className="startForm" onSubmit={inspectSimilarity}>
             <div className="panelHeader">
-              <h2>Vector Inspector</h2>
+              <h2>Vector inspector</h2>
               <span>{craftsLoading ? "..." : availableCrafts.length}</span>
             </div>
 
             <CraftSearchPicker
-              label="First Word"
+              label="First word"
               value={wordA}
               onChange={setWordA}
               crafts={availableCrafts}
               disabled={craftsLoading || loading}
-              placeholder="Search Global And New Crafts..."
+              placeholder="Search global and new crafts..."
             />
 
             <CraftSearchPicker
-              label="Second Word"
+              label="Second word"
               value={wordB}
               onChange={setWordB}
               crafts={availableCrafts}
               disabled={craftsLoading || loading}
-              placeholder="Search Global And New Crafts..."
+              placeholder="Search global and new crafts..."
             />
 
             {error && <div className="error">{error}</div>}
@@ -1750,7 +1801,7 @@ function HowItWorksPage({
               type="submit"
               disabled={craftsLoading || loading || !availableCrafts.length}
             >
-              {loading ? "Inspecting..." : "Inspect Similarity"}
+              {loading ? "Inspecting..." : "Inspect similarity"}
             </button>
           </form>
         </section>
@@ -1760,7 +1811,7 @@ function HowItWorksPage({
         <>
           <section className="panel insightResultPanel">
             <div className="panelHeader">
-              <h2>Nearest Recipe Vectors</h2>
+              <h2>Nearest recipe vectors</h2>
               <span>{hasNeighbors ? insight.neighbors.length : 0}</span>
             </div>
 
@@ -1796,7 +1847,7 @@ function HowItWorksPage({
 
           <section className="panel insightPayloadPanel">
             <div className="panelHeader">
-              <h2>What Gets Sent</h2>
+              <h2>What gets sent</h2>
               <span>{insight.generationPayload.model}</span>
             </div>
             <p className="payloadNote">
@@ -1819,16 +1870,16 @@ function HowItWorksPage({
 function getPageMeta(page, challenge, practiceSession, practiceComplete) {
   if (page === "race") {
     return {
-      eyebrow: "Choose Your Mode",
-      title: "NYCrafts Race",
+      eyebrow: "Daily route",
+      title: "NYCrafts race",
     };
   }
 
   if (page === "sandbox") {
     if (challenge && !challenge.completed) {
       return {
-        eyebrow: "Daily Challenge",
-        title: "Find The Word",
+        eyebrow: "Daily challenge",
+        title: "Find the word",
       };
     }
 
@@ -1837,28 +1888,28 @@ function getPageMeta(page, challenge, practiceSession, practiceComplete) {
       (practiceComplete && practiceSession)
     ) {
       return {
-        eyebrow: "Practice Mode",
-        title: "Crafting Sandbox",
+        eyebrow: "Practice",
+        title: "Crafting sandbox",
       };
     }
 
     return {
-      eyebrow: "Single Player Mode",
-      title: "Crafting Sandbox",
+      eyebrow: "Free play",
+      title: "Crafting sandbox",
     };
   }
 
   if (page === "map") {
     return {
-      eyebrow: "Craft Explorer",
-      title: "NYCrafts Graph",
+      eyebrow: "Craft explorer",
+      title: "NYCrafts graph",
     };
   }
 
   if (page === "insights") {
     return {
-      eyebrow: "Under The Hood",
-      title: "How It Works",
+      eyebrow: "Under the hood",
+      title: "How it works",
       subtitle:
         "Pick any two global words and inspect the embedding neighbors that guide new craft generation.",
     };
@@ -1893,6 +1944,7 @@ function App() {
   const [practiceTarget, setPracticeTarget] = useState(null);
   const [elapsedMs, setElapsedMs] = useState(0);
   const [winner, setWinner] = useState(null);
+  const [confettiRunId, setConfettiRunId] = useState(null);
 
   useEffect(() => {
     fetch(`${API_BASE}/api/elements`, {
@@ -1917,7 +1969,7 @@ function App() {
         if (Array.isArray(data.leaderboard)) setLeaderboard(data.leaderboard);
       })
       .catch(() => {
-        setError("Could Not Load The Daily Challenge.");
+        setError("Could not load the daily challenge.");
       });
   }, []);
 
@@ -1943,7 +1995,7 @@ function App() {
           : [],
       );
     } catch {
-      setError("Could Not Load Global Crafts.");
+      setError("Could not load global crafts.");
     } finally {
       setCraftsLoading(false);
     }
@@ -2053,12 +2105,12 @@ function App() {
     const trimmedName = playerName.trim();
 
     if (!trimmedName) {
-      setError("Enter A Player Name Before Starting.");
+      setError("Enter a player name before starting.");
       return;
     }
 
     if (!dailyTarget) {
-      setError("The Daily Challenge Is Not Ready Yet.");
+      setError("The daily challenge is not ready yet.");
       return;
     }
 
@@ -2128,13 +2180,13 @@ function App() {
     const chosenTarget = practiceTarget || practiceSession?.target;
 
     if (!chosenTarget) {
-      setError("Choose A Target Craft Before Starting.");
+      setError("Choose a target craft before starting.");
       return;
     }
 
     if (isStarterCraft(chosenTarget.name)) {
       setError(
-        "Starter Elements Are Already Available. Pick A Craft To Combine Toward.",
+        "Starter elements are already available. Pick a craft to combine toward.",
       );
       return;
     }
@@ -2313,6 +2365,7 @@ function App() {
         ...data.session,
         standing: data.standing || null,
       });
+      setConfettiRunId(crypto.randomUUID());
       setLeaderboard(data.leaderboard || []);
     } catch (err) {
       setError(err.message || "Could not finish challenge.");
@@ -2449,7 +2502,7 @@ function App() {
       setWinner(null);
       setElapsedMs(0);
       setGraphVersion((current) => current + 1);
-      setResetSuccess("Reset Complete.");
+      setResetSuccess("Reset complete.");
     } catch (err) {
       setError("Could not reset progress.");
     } finally {
@@ -2524,7 +2577,7 @@ function App() {
       >
         <div>
           <span className="muted">Target</span>
-          <strong>{target ? `${target.emoji} ${target.name}` : "Free Craft"}</strong>
+          <strong>{target ? `${target.emoji} ${target.name}` : "Free craft"}</strong>
         </div>
         {challenge && (
           <>
@@ -2573,7 +2626,7 @@ function App() {
                 onClick={endPractice}
                 disabled={busy}
               >
-                End Practice
+                End practice
               </button>
             </div>
           </>
@@ -2588,7 +2641,7 @@ function App() {
             <strong>{formatDuration(winner.durationMs)}</strong>
           </div>
           <button className="primaryButton" onClick={() => navigate("race")}>
-            View Standings
+            View standings
           </button>
         </section>
       )}
@@ -2606,7 +2659,7 @@ function App() {
             type="button"
             onClick={leavePracticeToRace}
           >
-            Back To Race
+            Back to race
           </button>
           <button
             className="ghostButton"
@@ -2614,7 +2667,7 @@ function App() {
             disabled={busy}
             onClick={() => startPractice({ preventDefault() {} })}
           >
-            Try Again
+            Try again
           </button>
         </section>
       )}
@@ -2626,11 +2679,11 @@ function App() {
           <div className="selectedItems">
             {selected.length === 0 && (
               <strong>
-                Pick Two Items
+                Pick two items
                 {history.length > 0 && (
                   <>
                     {" "}
-                    | Last Item: {history[0].result.emoji}{" "}
+                    | Last item: {history[0].result.emoji}{" "}
                     {history[0].result.name}
                   </>
                 )}
@@ -2657,7 +2710,7 @@ function App() {
 
           <input
             className="search"
-            placeholder="Search Elements…"
+            placeholder="Search elements..."
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -2684,13 +2737,13 @@ function App() {
 
         <section className="panel">
           <div className="panelHeader">
-            <h2>Recent Crafts</h2>
+            <h2>Recent crafts</h2>
             <span>{history.length}</span>
           </div>
 
           <div className="history">
             {history.length === 0 && (
-              <p className="empty">Your Discoveries Will Appear Here.</p>
+              <p className="empty">Your discoveries will appear here.</p>
             )}
 
             {history.map((entry) => (
@@ -2704,7 +2757,7 @@ function App() {
                 </div>
 
                 <small>
-                  {entry.source === "generated" ? "Generated" : "From Cache"}
+                  {entry.source === "generated" ? "Generated" : "From cache"}
                 </small>
               </article>
             ))}
@@ -2716,16 +2769,22 @@ function App() {
   }
 
   return (
-    <AppShell
-      currentPage={page}
-      onNavigate={navigate}
-      eyebrow={pageMeta.eyebrow}
-      title={pageMeta.title}
-      subtitle={pageMeta.subtitle}
-      hideHero={page === "reset" || page === "map"}
-    >
-      {pageBody}
-    </AppShell>
+    <>
+      <ConfettiBurst
+        runId={confettiRunId}
+        onDone={() => setConfettiRunId(null)}
+      />
+      <AppShell
+        currentPage={page}
+        onNavigate={navigate}
+        eyebrow={pageMeta.eyebrow}
+        title={pageMeta.title}
+        subtitle={pageMeta.subtitle}
+        hideHero={page === "reset" || page === "map"}
+      >
+        {pageBody}
+      </AppShell>
+    </>
   );
 }
 
