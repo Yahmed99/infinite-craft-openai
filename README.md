@@ -20,8 +20,6 @@ A NYC-themed game where players combine crafts to unlock iconic landmarks, foods
 * Bronx + Baseball → Yankees
 * Subway + Card → MetroCard
 
----
-
 ### Multiple Game Modes
 
 #### Race Mode
@@ -42,8 +40,6 @@ A NYC-themed game where players combine crafts to unlock iconic landmarks, foods
 * Access the complete crafting system
 * Discover hidden recipes and rare combinations
 
----
-
 ### Interactive 3D Craft Map
 
 **Knowledge Graph Visualization**
@@ -58,16 +54,11 @@ A NYC-themed game where players combine crafts to unlock iconic landmarks, foods
 * Visualize parent-child relationships
 * Track progression through the graph
 
----
-
 ### Progress Tracking
 
 * Crafted item collection
 * Reset progress functionality
 * Daily challenges and competitive gameplay
-
----
-
 
 ## Installation
 
@@ -116,8 +107,6 @@ npm run client
 http://localhost:5173
 ```
 
----
-
 ## Project Structure
 
 ```text
@@ -141,8 +130,6 @@ http://localhost:5173
 ├── README.md
 └── vite.config.js
 ```
-
----
 
 ## Technical Stack
 
