@@ -280,7 +280,7 @@ button {
   grid-template-columns: minmax(260px, 320px) minmax(0, 1fr);
   gap: 14px;
   align-items: stretch;
-  min-height: calc(100vh - 108px);
+  min-height: calc(100vh - 220px);
 }
 
 .mapSidebar {
@@ -293,7 +293,7 @@ button {
   border-radius: var(--radius);
   box-shadow: none;
   min-height: 0;
-  max-height: calc(100vh - 108px);
+  max-height: calc(100vh - 220px);
   overflow: auto;
 }
 
@@ -436,7 +436,7 @@ button {
   position: relative;
   flex: 1;
   min-height: 420px;
-  height: calc(100vh - 108px);
+  height: calc(100vh - 220px);
   max-height: 860px;
   border: 1px solid var(--border);
   border-radius: var(--radius);

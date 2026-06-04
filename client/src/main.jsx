@@ -106,7 +106,7 @@ const PAGES = {
   race: { id: "race", label: "Race" },
   sandbox: { id: "sandbox", label: "Sandbox" },
   map: { id: "map", label: "Map" },
-  insights: { id: "insights", label: "How it works" },
+  insights: { id: "insights", label: "How It Works" },
   reset: { id: "reset", label: "Reset" },
 };
 
@@ -167,11 +167,11 @@ function AppShell({
 
       <div
         className={
-          hideHero
-            ? currentPage === "map"
-              ? "pageContentMap"
-              : "pageContentCompact"
-            : "pageContent"
+          currentPage === "map"
+            ? "pageContentMap"
+            : hideHero
+              ? "pageContentCompact"
+              : "pageContent"
         }
       >
         {children}
@@ -841,13 +841,13 @@ function MapPage({ apiBase, graphVersion }) {
       <section className="mapLayout">
         <aside className="mapSidebar">
           <div className="mapSidebarHeader">
-            <h2>Craft graph</h2>
+            <h2>Explore</h2>
             <span>{loading ? "…" : graph.nodes.length}</span>
           </div>
 
           <input
             className="search mapSearchInput"
-            placeholder="Search crafts..."
+            placeholder="Search Crafts…"
             value={query}
             disabled={loading}
             onChange={(event) => setQuery(event.target.value)}
@@ -856,7 +856,7 @@ function MapPage({ apiBase, graphVersion }) {
 
           {(loading || query.trim()) && (
             <div className="mapSearchResults">
-              {loading && <p className="empty">Loading craft graph...</p>}
+              {loading && <p className="empty">Loading Craft Graph…</p>}
 
               {!loading && query.trim() && filteredNodes.length === 0 && (
                 <p className="empty">No crafts match that search.</p>
@@ -895,7 +895,7 @@ function MapPage({ apiBase, graphVersion }) {
           {selectedNode && (
             <div className="mapSelectedCraft">
               <div className="mapSelectedSummary">
-                <span className="muted">Selected craft</span>
+                <span className="muted">Selected Craft</span>
                 <div className="mapSelectedHero">
                   <span>{selectedNode.emoji || "✨"}</span>
                   <strong>{selectedNode.label}</strong>
@@ -960,12 +960,12 @@ function MapPage({ apiBase, graphVersion }) {
                 onClick={resetGraphView}
                 disabled={loading || graph.nodes.length === 0}
               >
-                Reset view
+                Reset View
               </button>
             </div>
             {loading && (
               <div className="mapLoadingOverlay">
-                <div className="loader">Loading graph...</div>
+                <div className="loader">Loading Graph…</div>
               </div>
             )}
             <ForceGraph3D
@@ -1095,11 +1095,11 @@ function RaceResultCard({ winner, dailyTarget, leaderboard }) {
     <article className="raceResultCard">
       <div className="raceResultHeader">
         <div>
-          <span className="muted">Finished run</span>
+          <span className="muted">Finished Run</span>
           <strong>{winner.playerName || "Guest"}</strong>
         </div>
         <span className="raceResultRank">
-          {standing ? `#${standing}` : "Rank pending"}
+          {standing ? `#${standing}` : "Rank Pending"}
         </span>
       </div>
 
@@ -1111,7 +1111,7 @@ function RaceResultCard({ winner, dailyTarget, leaderboard }) {
         <div>
           <span>Standing</span>
           <strong>
-            {standing && totalRuns ? `${standing} Of ${totalRuns}` : "Pending"}
+            {standing && totalRuns ? `${standing} of ${totalRuns}` : "Pending"}
           </strong>
         </div>
         <div>
@@ -1121,7 +1121,7 @@ function RaceResultCard({ winner, dailyTarget, leaderboard }) {
           </strong>
         </div>
         <div>
-          <span>Behind best</span>
+          <span>Behind Best</span>
           <strong>{gapToBest === null ? "Pending" : formatDuration(gapToBest)}</strong>
         </div>
       </div>
@@ -1199,7 +1199,7 @@ function RacePage({
       {raceActive && (
         <section className="statusBanner">
           <p>
-            Daily challenge in progress for{" "}
+            Daily Challenge in progress for{" "}
             <strong>{playerName || "Guest"}</strong>.
           </p>
           <button
@@ -1245,7 +1245,7 @@ function RacePage({
           }
           onClick={() => onModeChange("daily")}
         >
-          Daily challenge
+          Daily Challenge
         </button>
         <button
           type="button"
@@ -1270,20 +1270,20 @@ function RacePage({
             <section className="panel racePanel">
               <form className="startForm" onSubmit={onStartDaily}>
                 <label>
-                  Player name
+                  Player Name
                   <input
                     className="search"
                     value={playerName}
                     maxLength={24}
                     onChange={(event) => onPlayerNameChange(event.target.value)}
-                    placeholder="Your name"
+                    placeholder="Your Name"
                   />
                 </label>
 
                 <div className="targetCallout">
                   <span>Today&apos;s Target</span>
                   <strong>
-                    {dailyTarget?.emoji} {dailyTarget?.name || "Loading..."}
+                    {dailyTarget?.emoji} {dailyTarget?.name || "Loading…"}
                   </strong>
                 </div>
 
@@ -1299,8 +1299,8 @@ function RacePage({
                   {loading
                     ? "Starting…"
                     : raceActive
-                      ? "Restart challenge"
-                      : "Start daily challenge"}
+                      ? "Restart Challenge"
+                      : "Start Daily Challenge"}
                 </button>
               </form>
             </section>
@@ -1313,7 +1313,7 @@ function RacePage({
               />
 
               <div className="panelHeader">
-                <h2>Fastest times</h2>
+                <h2>Fastest Times</h2>
                 <span>{leaderboard.length}</span>
               </div>
               <Leaderboard scores={leaderboard} />
@@ -1324,13 +1324,13 @@ function RacePage({
             <section className="panel racePanel">
               <form className="startForm" onSubmit={onStartPractice}>
                 <div className="panelHeader">
-                  <h2>Choose a target</h2>
+                  <h2>Choose a Target</h2>
                   <span>{craftsLoading ? "…" : practiceCrafts.length}</span>
                 </div>
 
                 <input
                   className="search"
-                  placeholder="Search crafts to practice..."
+                  placeholder="Search Crafts to Practice…"
                   value={practiceQuery}
                   disabled={craftsLoading}
                   onChange={(event) => onPracticeQueryChange(event.target.value)}
@@ -1338,7 +1338,7 @@ function RacePage({
 
                 <div className="practiceCraftList">
                   {craftsLoading && (
-                    <p className="empty">Loading crafts...</p>
+                    <p className="empty">Loading Crafts…</p>
                   )}
 
                   {!craftsLoading && !practiceQuery.trim() && (
@@ -1398,7 +1398,7 @@ function RacePage({
 
                 {practiceTarget && (
                   <div className="targetCallout">
-                    <span>Practice target</span>
+                    <span>Practice Target</span>
                     <strong>
                       {practiceTarget.emoji} {practiceTarget.name}
                     </strong>
@@ -1417,8 +1417,8 @@ function RacePage({
                   {loading
                     ? "Starting…"
                     : practiceActive
-                      ? "Restart practice"
-                      : "Start practice"}
+                      ? "Restart Practice"
+                      : "Start Practice"}
                 </button>
               </form>
             </section>
@@ -1432,7 +1432,7 @@ function RacePage({
 function ResetPage({ onReset, busy, error, success }) {
   return (
     <div className="resetPage">
-      <h2 className="resetTitle">Reset progress</h2>
+      <h2 className="resetTitle">Reset Progress</h2>
       <p className="resetHint">Clears crafts and elements on this device.</p>
 
       {error && <div className="resetMessage resetMessageError">{error}</div>}
@@ -1445,8 +1445,9 @@ function ResetPage({ onReset, busy, error, success }) {
         type="button"
         onClick={onReset}
         disabled={busy}
+        aria-label={busy ? "Resetting progress" : "Erase progress on this device"}
       >
-        {busy ? "Resetting..." : "Reset"}
+        {busy ? "Resetting…" : "Erase Progress"}
       </button>
     </div>
   );
@@ -1509,7 +1510,7 @@ function SimilarityGraph({ pair, neighbors = [] }) {
       className="similarityGraph"
       viewBox={`0 0 ${width} ${height}`}
       role="img"
-      aria-label="Similarity graph"
+      aria-label="Similarity Graph"
     >
       <defs>
         <radialGradient id="targetGlow">
@@ -1547,7 +1548,7 @@ function SimilarityGraph({ pair, neighbors = [] }) {
             strokeWidth={1.5 + node.closeness * 2}
           />
           <text x={node.x} y={node.y - 3} textAnchor="middle" className="graphNodeEmoji">
-            {node.resultEmoji || "âœ¨"}
+            {node.resultEmoji || "✨"}
           </text>
           <text x={node.x} y={node.y + 38} textAnchor="middle" className="graphNodeText">
             {node.resultName}
@@ -1567,7 +1568,7 @@ function CraftSearchPicker({
   onChange,
   crafts,
   disabled,
-  placeholder = "Search crafts..."
+  placeholder = "Search Crafts…"
 }) {
   const [query, setQuery] = React.useState("");
   const selectedCraft = crafts.find(
@@ -1628,7 +1629,7 @@ function CraftSearchPicker({
                   setQuery("");
                 }}
               >
-                <span>{craft.emoji || "Ã¢Å“Â¨"}</span>
+                <span>{craft.emoji || "✨"}</span>
                 {craft.name}
               </button>
             );
@@ -1663,7 +1664,7 @@ function HowItWorksPage({
       if (!craftMap.has(key)) {
         craftMap.set(key, {
           name,
-          emoji: craft.emoji || "Ã¢Å“Â¨"
+          emoji: craft.emoji || "✨"
         });
       }
     }
@@ -1750,20 +1751,20 @@ function HowItWorksPage({
       <div className="insightsIntro">
         <section className="panel insightExplainPanel">
           <div className="panelHeader">
-              <h2>Generation pipeline</h2>
-              <span>3 steps</span>
+              <h2>Generation Pipeline</h2>
+              <span>3 Steps</span>
           </div>
           <ol className="pipelineList">
             <li>
-              <strong>Embed the pair</strong>
+              <strong>Embed the Pair</strong>
               <p>The server turns the selected words into one embedding for text like "Food + City".</p>
             </li>
             <li>
-              <strong>Find similar recipes</strong>
+              <strong>Find Similar Recipes</strong>
               <p>It compares that vector with stored recipe vectors using cosine similarity.</p>
             </li>
             <li>
-              <strong>Generate with context</strong>
+              <strong>Generate With Context</strong>
               <p>The closest recipe names are sent to the generation model as examples for the new result.</p>
             </li>
           </ol>
@@ -1772,26 +1773,26 @@ function HowItWorksPage({
         <section className="panel insightControlPanel">
           <form className="startForm" onSubmit={inspectSimilarity}>
             <div className="panelHeader">
-              <h2>Vector inspector</h2>
-              <span>{craftsLoading ? "..." : availableCrafts.length}</span>
+              <h2>Vector Inspector</h2>
+              <span>{craftsLoading ? "…" : availableCrafts.length}</span>
             </div>
 
             <CraftSearchPicker
-              label="First word"
+              label="First Word"
               value={wordA}
               onChange={setWordA}
               crafts={availableCrafts}
               disabled={craftsLoading || loading}
-              placeholder="Search global and new crafts..."
+              placeholder="Search Global and New Crafts…"
             />
 
             <CraftSearchPicker
-              label="Second word"
+              label="Second Word"
               value={wordB}
               onChange={setWordB}
               crafts={availableCrafts}
               disabled={craftsLoading || loading}
-              placeholder="Search global and new crafts..."
+              placeholder="Search Global and New Crafts…"
             />
 
             {error && <div className="error">{error}</div>}
@@ -1801,7 +1802,7 @@ function HowItWorksPage({
               type="submit"
               disabled={craftsLoading || loading || !availableCrafts.length}
             >
-              {loading ? "Inspecting..." : "Inspect similarity"}
+              {loading ? "Inspecting…" : "Inspect Similarity"}
             </button>
           </form>
         </section>
@@ -1811,7 +1812,7 @@ function HowItWorksPage({
         <>
           <section className="panel insightResultPanel">
             <div className="panelHeader">
-              <h2>Nearest recipe vectors</h2>
+              <h2>Nearest Recipe Vectors</h2>
               <span>{hasNeighbors ? insight.neighbors.length : 0}</span>
             </div>
 
@@ -1830,7 +1831,7 @@ function HowItWorksPage({
                           {neighbor.a} + {neighbor.b} = {neighbor.resultEmoji}{" "}
                           {neighbor.resultName}
                         </strong>
-                        <span>Cosine {formatScore(neighbor.score)}</span>
+                        <span>Cosine Similarity {formatScore(neighbor.score)}</span>
                       </div>
                       <div
                         className="scoreMeter"
@@ -1847,14 +1848,14 @@ function HowItWorksPage({
 
           <section className="panel insightPayloadPanel">
             <div className="panelHeader">
-              <h2>What gets sent</h2>
+              <h2>What Gets Sent</h2>
               <span>{insight.generationPayload.model}</span>
             </div>
             <p className="payloadNote">
               The raw embedding is used for search. The generation request receives the closest recipe text as context.
             </p>
             <VectorPreview
-              label={`${insight.embedding.model} preview (${insight.embedding.dimensions} dimensions)`}
+              label={`${insight.embedding.model} Preview (${insight.embedding.dimensions} Dimensions)`}
               values={insight.embedding.preview}
             />
             <pre className="payloadBox">
@@ -1867,19 +1868,32 @@ function HowItWorksPage({
   );
 }
 
-function getPageMeta(page, challenge, practiceSession, practiceComplete) {
+function getPageMeta(
+  page,
+  challenge,
+  practiceSession,
+  practiceComplete,
+  raceMode,
+) {
   if (page === "race") {
+    if (raceMode === "practice") {
+      return {
+        eyebrow: "Practice",
+        title: "Choose a Target",
+      };
+    }
+
     return {
-      eyebrow: "Daily route",
-      title: "NYCrafts race",
+      eyebrow: "Daily Route",
+      title: "NYCrafts Race",
     };
   }
 
   if (page === "sandbox") {
     if (challenge && !challenge.completed) {
       return {
-        eyebrow: "Daily challenge",
-        title: "Find the word",
+        eyebrow: "Daily Challenge",
+        title: "Find the Word",
       };
     }
 
@@ -1889,27 +1903,27 @@ function getPageMeta(page, challenge, practiceSession, practiceComplete) {
     ) {
       return {
         eyebrow: "Practice",
-        title: "Crafting sandbox",
+        title: "Crafting Sandbox",
       };
     }
 
     return {
-      eyebrow: "Free play",
-      title: "Crafting sandbox",
+      eyebrow: "Free Play",
+      title: "Crafting Sandbox",
     };
   }
 
   if (page === "map") {
     return {
-      eyebrow: "Craft explorer",
-      title: "NYCrafts graph",
+      eyebrow: "Craft Explorer",
+      title: "NYCrafts Graph",
     };
   }
 
   if (page === "insights") {
     return {
-      eyebrow: "Under the hood",
-      title: "How it works",
+      eyebrow: "Under the Hood",
+      title: "How It Works",
       subtitle:
         "Pick any two global words and inspect the embedding neighbors that guide new craft generation.",
     };
@@ -2510,7 +2524,13 @@ function App() {
     }
   }
 
-  const pageMeta = getPageMeta(page, challenge, practiceSession, practiceComplete);
+  const pageMeta = getPageMeta(
+    page,
+    challenge,
+    practiceSession,
+    practiceComplete,
+    raceMode,
+  );
 
   let pageBody;
 
@@ -2577,7 +2597,7 @@ function App() {
       >
         <div>
           <span className="muted">Target</span>
-          <strong>{target ? `${target.emoji} ${target.name}` : "Free craft"}</strong>
+          <strong>{target ? `${target.emoji} ${target.name}` : "Free Craft"}</strong>
         </div>
         {challenge && (
           <>
@@ -2626,7 +2646,7 @@ function App() {
                 onClick={endPractice}
                 disabled={busy}
               >
-                End practice
+                End Practice
               </button>
             </div>
           </>
@@ -2637,11 +2657,11 @@ function App() {
       {winner && (
         <section className="winBanner">
           <div>
-            <span className="muted">Finished</span>
+            <span className="muted">Finished Run</span>
             <strong>{formatDuration(winner.durationMs)}</strong>
           </div>
           <button className="primaryButton" onClick={() => navigate("race")}>
-            View standings
+            View Standings
           </button>
         </section>
       )}
@@ -2659,7 +2679,7 @@ function App() {
             type="button"
             onClick={leavePracticeToRace}
           >
-            Back to race
+            Back to Race
           </button>
           <button
             className="ghostButton"
@@ -2667,7 +2687,7 @@ function App() {
             disabled={busy}
             onClick={() => startPractice({ preventDefault() {} })}
           >
-            Try again
+            Try Again
           </button>
         </section>
       )}
@@ -2679,11 +2699,11 @@ function App() {
           <div className="selectedItems">
             {selected.length === 0 && (
               <strong>
-                Pick two items
+                Pick Two Items
                 {history.length > 0 && (
                   <>
                     {" "}
-                    | Last item: {history[0].result.emoji}{" "}
+                    | Last Item: {history[0].result.emoji}{" "}
                     {history[0].result.name}
                   </>
                 )}
@@ -2710,7 +2730,7 @@ function App() {
 
           <input
             className="search"
-            placeholder="Search elements..."
+            placeholder="Search Elements…"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
           />
@@ -2737,7 +2757,7 @@ function App() {
 
         <section className="panel">
           <div className="panelHeader">
-            <h2>Recent crafts</h2>
+            <h2>Recent Crafts</h2>
             <span>{history.length}</span>
           </div>
 
@@ -2757,7 +2777,7 @@ function App() {
                 </div>
 
                 <small>
-                  {entry.source === "generated" ? "Generated" : "From cache"}
+                  {entry.source === "generated" ? "Generated" : "From Cache"}
                 </small>
               </article>
             ))}
@@ -2780,7 +2800,7 @@ function App() {
         eyebrow={pageMeta.eyebrow}
         title={pageMeta.title}
         subtitle={pageMeta.subtitle}
-        hideHero={page === "reset" || page === "map"}
+        hideHero={page === "reset"}
       >
         {pageBody}
       </AppShell>
